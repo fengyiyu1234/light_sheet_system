@@ -1,0 +1,31 @@
+# Unused legacy code, data and models (kept on disk only; see README)
+_archive/
+
+# MATLAB autosave / editor files
+*.asv
+*.m~
+*.autosave
+slprj/
+
+# Runtime outputs written by the app into MMcodeOrcaV2/
+MMcodeOrcaV2/scanpattern.mat
+MMcodeOrcaV2/allpoints.mat
+imaging_params_*.xlsx
+
+# Images and large binaries should never go into git
+*.tif
+*.tiff
+*.pt
+*.pth
+*.h5
+*.mat
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+~$*
