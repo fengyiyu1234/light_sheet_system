@@ -1,4 +1,7 @@
-# V5 app guide (`app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp`)
+# App guide (`LightSheetControl.mlapp`)
+
+This app was renamed in Nov 2026 from `app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp`;
+the code is the same, and "V5" below refers to this app.
 
 The app is a single App Designer class of about 6000 lines. About 1000 of those lines
 are auto-generated UI layout (`createComponents`). The callbacks below are listed by name;

@@ -1,6 +1,6 @@
 % Greenbaum Lab
 % greenbaum@ncsu.edu, rspate@ncsu.edu
-% LightSheet_10x_07122019.m
+% init_hardware.m  (formerly LightSheet_10x_02032026_RunAll2.m)
 % July 12, 2019
 % Updated: September 24, 2024
 % Script for operation of light sheet microscope
@@ -10,7 +10,8 @@
 %      states_record.xlsx from the current folder).
 %   2. Run this script once. It creates `controlParameters` and `allLasers`
 %      in the base workspace.
-%   3. Then start app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp;
+%   3. Then start LightSheetControl.mlapp (formerly
+%      app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp);
 %      the app reads both variables with evalin('base', ...).
 %   About 950 lines of commented-out legacy code (old calibration and scan
 %   routines) were removed from the end of this file. The full original is

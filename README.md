@@ -5,18 +5,19 @@ through Micro-Manager 1.4, ASI Tiger stage, Newport lens motors, 4 Coherent OBIS
 lasers, a filter wheel, an MCC DAQ (shutter + galvos) and two function generators.
 
 The current production GUI is
-`MMcodeOrcaV2/app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp`.
+`MMcodeOrcaV2/LightSheetControl.mlapp` (renamed in Nov 2026 from
+`app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp`; the code is the same).
 For a walkthrough of what the app does internally, see [docs/V5_app_guide.md](docs/V5_app_guide.md).
 
 ## How to start the microscope
 
 1. In MATLAB (the app was written for R2019a), `cd` into `MMcodeOrcaV2`.
    The app reads `states_record.xlsx` from the current folder.
-2. Run `LightSheet_10x_02032026_RunAll2.m`. It opens every hardware connection and
+2. Run `init_hardware.m` (formerly `LightSheet_10x_02032026_RunAll2.m`). It opens every hardware connection and
    puts two variables in the base workspace:
    - `controlParameters`: a struct of hardware handles (see below)
    - `allLasers`: a 1x4 struct array, 488 / 561 / 640 / 730 nm, with `.serialPort` and `.maxPower`
-3. Open and run `app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp`.
+3. Open and run `LightSheetControl.mlapp`.
    Its `startupFcn` gets both variables with `evalin('base', ...)`, so step 2 has to come first.
 
 > Both the init script and the app's `startupFcn` call `addpath` with
@@ -27,8 +28,8 @@ For a walkthrough of what the app does internally, see [docs/V5_app_guide.md](do
 
 ```
 MMcodeOrcaV2/
-  app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp   main GUI (App Designer)
-  LightSheet_10x_02032026_RunAll2.m   hardware init script (run first)
+  LightSheetControl.mlapp             main GUI (App Designer)
+  init_hardware.m                     hardware init script (run first)
   states_record.xlsx                  start-up calibration tables read by the app (see guide)
   magnify.m                           3rd-party magnifier used by the Live View window
   selfmade/
@@ -43,10 +44,12 @@ UsefullFunctions/CalibrationFunctions/
   InitiateHardware.m                  load Micro-Manager config -> mmc
   InitTheMotor.m                      open a Newport lens-motor serial port
   ShowAllRunningDevices.m             print loaded MM devices
+config/
+  configuration_03132026.cfg          backup copy of the Micro-Manager hardware config
 ```
 
 MATLAB's `requiredFilesAndProducts` confirmed that the files above are all the init
-script and the V5 app need.
+script and the app need.
 Required toolboxes: Image Processing, Wavelet (`wentropy` autofocus), Data Acquisition
 (+ MCC support package), and Instrument Control (`visa`, `serial`). The Micro-Manager 1.4
 Java API (`mmcorej`) must also be on the Java class path.
@@ -67,15 +70,18 @@ Java API (`mmcorej`) must also be on the Java class path.
 Filter wheel positions: 1 empty, 2 = 525/39, 3 = 593/40, 4 = 676/37, 5 = 785/62,
 6 = Semrock multi-notch NF03-405/488/561/635E.
 
-Two values are not in git and should be copied in: the Micro-Manager `.cfg` file
-(`configuration_03132026.cfg`, on the microscope PC) and the COM-port assignments if they change.
+The init script loads the Micro-Manager config from `C:\Program Files\Micro-Manager-1.4\`;
+`config/` holds a backup copy of it. If you change the hardware setup, update both.
+
+**TODO:** copy `javaclasspath.txt` and `librarypath.txt` from the microscope PC's MATLAB
+`prefdir` into `config/`. These files let MATLAB find the Micro-Manager Java API (`mmcorej`).
 
 ## `_archive/` (not tracked by git)
 
 The November 2026 cleanup moved 261 unused files into `_archive/`, keeping their
 original relative paths. `_archive/MANIFEST_moved_files.txt` lists every file. Main contents:
 
-- ~30 older `.mlapp` versions. Features that V5 does **not** have:
+- ~30 older `.mlapp` versions. Features that the current app does **not** have:
   - V1–V3: auto laser power (`auto_laser_power_*`, HDPR acquisition)
   - M1: CMS4 multispectral-camera buttons
   - `autofocus_RTA_dev`: real-time tile alignment
