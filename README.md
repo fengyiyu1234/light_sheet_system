@@ -13,7 +13,8 @@ For a record of the changes made and the open TODOs, see [docs/PROGRESS_LOG.md](
 ## How to start the microscope
 
 1. In MATLAB (the app was written for R2019a), `cd` into `MMcodeOrcaV2`.
-   The app reads `states_record.xlsx` from the current folder.
+   The app finds `states_record.xlsx` next to itself, but `scanpattern.mat` and
+   `allpoints.mat` are saved to the current folder.
 2. Run `init_hardware.m` (formerly `LightSheet_10x_02032026_RunAll2.m`). It opens every hardware connection and
    puts two variables in the base workspace:
    - `controlParameters`: a struct of hardware handles (see below)
@@ -21,9 +22,11 @@ For a record of the changes made and the open TODOs, see [docs/PROGRESS_LOG.md](
 3. Open and run `LightSheetControl.mlapp`.
    Its `startupFcn` gets both variables with `evalin('base', ...)`, so step 2 has to come first.
 
-> Both the init script and the app's `startupFcn` call `addpath` with
-> **`D:\lightSheetsourcecode_twopath_multipower\...`**, which is where the code lives
-> on the microscope PC. If you check the repo out somewhere else, change those paths.
+> Both the init script and the app's `startupFcn` find the code folders relative to
+> their own location (`MMcodeOrcaV2\`), so the repo can be cloned into any folder.
+> `init_hardware.m` removes the old copy (`D:\lightSheetsourcecode_twopath_multipower`, still
+> used by others) from the path for the current session only; the saved path is not changed.
+> Restart MATLAB before switching between the old and the new version.
 
 ## Repository layout (only files that are actually used)
 

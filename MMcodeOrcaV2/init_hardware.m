@@ -6,8 +6,8 @@
 % Script for operation of light sheet microscope
 %
 % HOW TO USE (2026-11 cleanup note):
-%   1. Set MATLAB's current folder to MMcodeOrcaV2 (the app reads
-%      states_record.xlsx from the current folder).
+%   1. Set MATLAB's current folder to MMcodeOrcaV2 (scanpattern.mat and
+%      allpoints.mat are saved there; code paths are found automatically).
 %   2. Run this script once. It creates `controlParameters` and `allLasers`
 %      in the base workspace.
 %   3. Then start LightSheetControl.mlapp (formerly
@@ -18,11 +18,39 @@
 %   _archive/MMcodeOrcaV2/LightSheet_10x_02032026_RunAll2_ORIGINAL_full.m
 %
 
-addpath('D:\lightSheetsourcecode_twopath_multipower\AfgCode',...
-        'D:\lightSheetsourcecode_twopath_multipower\FilterWheel',...
-        'D:\lightSheetsourcecode_twopath_multipower\OBISGeneral',...
-        'D:\lightSheetsourcecode_twopath_multipower\UsefullFunctions\CalibrationFunctions',...
-        'D:\lightSheetsourcecode_twopath_multipower\MMcodeOrcaV2\selfmade');
+% Code folders are found relative to this script (MMcodeOrcaV2\), so the
+% repo can be cloned into any folder.
+appDir = fileparts(mfilename('fullpath'));
+if isempty(appDir)   % e.g. code pasted into the command window
+    appDir = fileparts(which('init_hardware'));
+end
+if isempty(appDir)
+    error('Cannot find init_hardware.m: cd to the MMcodeOrcaV2 folder and run the script again.');
+end
+repoDir = fileparts(appDir);
+
+% The old copy of the code (used by other people on this PC) is on the saved
+% MATLAB path. Remove its folders for THIS MATLAB SESSION ONLY, so none of its
+% functions can be called by mistake. No savepath: the saved path is not
+% changed, and restarting MATLAB brings the old folders back.
+oldCodeDir = 'D:\lightSheetsourcecode_twopath_multipower';
+p = strsplit(path, pathsep);
+oldEntries = p(startsWith(p, oldCodeDir, 'IgnoreCase', true) & ...
+               ~startsWith(p, repoDir, 'IgnoreCase', true));
+if ~isempty(oldEntries)
+    rmpath(oldEntries{:});
+    fprintf('Removed %d folder(s) of the old code from the path (this session only).\n', numel(oldEntries));
+end
+if startsWith(pwd, oldCodeDir, 'IgnoreCase', true) && ~startsWith(pwd, repoDir, 'IgnoreCase', true)
+    error('The current folder is inside the old code (%s). cd to %s and run again.', oldCodeDir, appDir);
+end
+clear p oldEntries
+
+addpath(fullfile(repoDir,'AfgCode'), ...
+        fullfile(repoDir,'FilterWheel'), ...
+        fullfile(repoDir,'OBISgeneral'), ...
+        fullfile(repoDir,'UsefullFunctions','CalibrationFunctions'), ...
+        fullfile(appDir,'selfmade'));
 % (DCMotor, UsefullFunctions\PickTiles and MMcodeOrcaV2\wholezstackfiles were
 %  removed from the path in the 2026-11 cleanup: nothing in this script or in
 %  the V5 app uses them. The originals are in _archive/.)

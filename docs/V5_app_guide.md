@@ -13,10 +13,10 @@ find them in App Designer's Code View or with Ctrl+F.
 
 ## 1. Start-up (`startupFcn`)
 
-1. Runs `addpath` on the `D:\lightSheetsourcecode_twopath_multipower\...` folders.
+1. Runs `addpath` on the code folders, found relative to the app file (`fileparts(which(class(app)))`).
 2. `controlParameters` and `allLasers` are taken from the base workspace (created by the init script).
 3. Turns all 4 lasers off and moves the filter wheel to position 1.
-4. Reads `states_record.xlsx` into the GUI tables:
+4. Reads `states_record.xlsx` (from the app folder) into the GUI tables:
 
 | Sheet | Property / UI table | Contents |
 |---|---|---|

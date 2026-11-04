@@ -6,6 +6,38 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-03: relative code paths (repo can be cloned into any folder)
+
+- `init_hardware.m` and the app's `startupFcn` no longer `addpath` the hard-coded
+  `D:\lightSheetsourcecode_twopath_multipower\...` folders. They find the folders from their
+  own location instead (`mfilename('fullpath')` in the script, `which(class(app))` in the app).
+- The app reads `states_record.xlsx` from its own folder, not from the current folder.
+- Removed from the app's `addpath`: `DCMotor`, `UsefullFunctions\PickTiles`,
+  `MMcodeOrcaV2\wholezstackfiles` (unused, already in `_archive/`).
+- Still in the current folder: the outputs `scanpattern.mat` and `allpoints.mat`.
+- The old copy `D:\lightSheetsourcecode_twopath_multipower` must stay on the saved MATLAB path
+  because other people still use it. `init_hardware.m` therefore removes its folders with
+  `rmpath` for the current session only (no `savepath`), and stops with an error if the
+  current folder is inside the old copy. Restarting MATLAB restores the old path.
+- Backups: `_archive/MMcodeOrcaV2/LightSheetControl_before_relative_paths.mlapp`,
+  `_archive/MMcodeOrcaV2/init_hardware_before_relative_paths.m`.
+- Checks: `appModel.mat` and `document.xml` match; `checkcode` shows the same warning count
+  (369). The path logic was tested from a different current folder. Not tested on the microscope yet.
+
+---
+
+## 2026-11-03: print tile start/end depth when saving checkpoints
+
+- `savecheckpointsButtonPushed`: the command window used to show only the list of saved
+  tile numbers (`text_saved_list = 'Saved Tiles List: 1 2 3'`). It now prints the tile just
+  saved with its start/end depth and stage X/Y/Z, then every saved tile as `n: start ~ end`.
+  The Tile States text box in the app is unchanged.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_tile_zprint.mlapp`.
+- Checks: the code in `appModel.mat` and `document.xml` matches; `checkcode` reports no
+  syntax errors. Not tested on the microscope yet.
+
+---
+
 ## 2026-11-03: repo cleanup, renames, first bug fixes
 
 Maintainer: Fengyi Yu. Edits were made on the analysis workstation copy
