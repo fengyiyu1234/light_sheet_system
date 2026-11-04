@@ -6,6 +6,39 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-03: reliable lens position reads (Ryan's "obj buttons don't update the table" bug)
+
+Report (Ryan Garry, Oct 8-9): moving the objective with the left/right buttons moved the
+focus, but the detection lens position in the table was not updated, so later samples were
+blurry. It happened after imaging, and restarting the GUI did not fix it.
+
+Cause:
+1. Before the 2026-11 fix, `dynamic_focus` (Entropy) sent a `1TP?` and never read the reply.
+   Each autofocus during imaging left one old position in the serial input buffer, so the
+   buttons (send `1TP?`, read one line) showed an old position. The serial object lives in
+   `controlParameters` in the base workspace, so restarting the GUI kept the buffer.
+   Removing that query (see the 2026-11-03 cleanup entry) fixes the source.
+2. (Possible, probably minor.) The buttons wait a fixed `pause(0.5)` (`pause(1)` for the
+   excitation lens) before reading. `InitTheMotor` sends `1VA0.2` (0.2 units/s, assumed mm/s;
+   not verified on the controller: it is sent right after `1OR`, check with `1VA?`). At that
+   speed the largest steps (objective 0.01 mm, excitation 0.1 mm) finish within the pause,
+   so this only matters if the real velocity is much lower. Cause 1 explains the report.
+
+Change:
+- New `MMcodeOrcaV2/selfmade/readLensPos.m`: discards the serial input buffer before every
+  `1TP?` and reads until two reads in a row agree (motor stopped; 10 s timeout with a warning).
+- Uses it in the app: `left/rightButtonObj`, `left/rightButtonExt`, `startupFcn`, and the
+  position sync after `RunAutoFocusButtonPushed`.
+- `saveoffsetfordifferentcolorButtonPushed` now reads both lens positions from the motors
+  before saving, instead of trusting the motor table.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_readLensPos.mlapp`.
+- Checks: `appModel.mat` was rebuilt from `document.xml` (75 callbacks, 7 changed, as
+  intended). `checkcode`: no errors, 360 warnings (was 369). `readLensPos` was tested with a
+  simulated motor (stale replies in the buffer, motor still moving): it returned the final
+  position. **Not tested on the real motors yet.**
+
+---
+
 ## 2026-11-03: relative code paths (repo can be cloned into any folder)
 
 - `init_hardware.m` and the app's `startupFcn` no longer `addpath` the hard-coded

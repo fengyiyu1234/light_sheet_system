@@ -40,6 +40,7 @@ MMcodeOrcaV2/
     getXYZposition.m                  read X/Y/Z from the ASI stage
     SetRelativePos.m                  relative X/Y/Z move + wait
     getpos.m                          parse Newport "1TP?" reply
+    readLensPos.m                     read a lens motor position reliably (flush + wait until stopped)
     createScanpattern.m               build the M x N tile grid
 AfgCode/          Tektronix AFG3022 (afg) + Siglent SDG1022X (afg2): connect, DC, ramp
 OBISgeneral/      OBIS laser: init, on/off, set/check power, disconnect

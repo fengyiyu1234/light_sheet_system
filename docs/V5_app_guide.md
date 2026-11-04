@@ -48,8 +48,8 @@ write is `outputSingleScan(s1, [shutter, galvoX, galvoY, galvoZ])`.
 | Enable / Disable Camera | `EnableCamButtonPushed`, `DisableCamButtonPushed` | Live View: a blocking `while` loop in `EnableCam` that runs until `myhandles.continue = false` |
 | Live View buttons | `RunAutoFocusButtonPushed`, `ShowGridCheckBoxValueChanged`, `SnapHistogramButtonPushed`, `ImagecontrastValueChanged`, `Exposure_timeEditFieldValueChanged` | Tools that work while Live View is open |
 | Stage arrows ⏫⏬⍟⌾⏪⏩↺↻, step dropdowns, Get Position | `Button*_Pushed`, `*_stepDropDownValueChanged`, `GetPositionButtonPushed` | Relative stage moves. Moves are blocked while the status lamp is green (a scan pattern is active), except depth (Y) moves |
-| Excitation / Detection lens | `left/rightButtonExt/Obj`, `Ext/ObjStepsizeDropDown` | Newport relative moves (`1PR`), then reads the position back (`1TP?`) |
-| save offset for different color | `saveoffsetfordifferentcolorButtonPushed` | Copies the current galvo and lens values into the selected color's row of `UITable_offset` (in memory only) |
+| Excitation / Detection lens | `left/rightButtonExt/Obj`, `Ext/ObjStepsizeDropDown` | Newport relative moves (`1PR`), then reads the position back with `readLensPos` (discards stale replies, waits until the motor stops) |
+| save offset for different color | `saveoffsetfordifferentcolorButtonPushed` | Reads both lens positions from the motors, then copies the galvo and lens values into the selected color's row of `UITable_offset` (in memory only) |
 | Paint Mode (Paint, Up/Down/Left/Right, Center, Save paint) | `PaintButtonValueChanged`, `Up/Down/Left/RightButtonPushed`, `CenterButtonPushed`, `SavepaintButtonPushed` | Builds a stitched overview on a 21x21-tile canvas (0.65 µm/px) to find the sample and center it |
 | AFG_scan, Roll Scan / Roll slider | `AFG_scanButtonValueChanged`, `RollScan*`, `RollSlider*` | Turns the light-sheet ramp on AFG ch1 on or off; roll uses ch2 |
 | **M-by-N tiles panel** | see section 3 | Multi-tile z-stack acquisition |
