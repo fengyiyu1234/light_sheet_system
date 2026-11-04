@@ -51,6 +51,7 @@ UsefullFunctions/CalibrationFunctions/
   ShowAllRunningDevices.m             print loaded MM devices
 config/
   configuration_03132026.cfg          backup copy of the Micro-Manager hardware config
+  javaclasspath.txt                   copy of the microscope PC's MATLAB prefdir file (mmcorej)
 ```
 
 MATLAB's `requiredFilesAndProducts` confirmed that the files above are all the init
@@ -78,8 +79,9 @@ Filter wheel positions: 1 empty, 2 = 525/39, 3 = 593/40, 4 = 676/37, 5 = 785/62,
 The init script loads the Micro-Manager config from `C:\Program Files\Micro-Manager-1.4\`;
 `config/` holds a backup copy of it. If you change the hardware setup, update both.
 
-**TODO:** copy `javaclasspath.txt` and `librarypath.txt` from the microscope PC's MATLAB
-`prefdir` into `config/`. These files let MATLAB find the Micro-Manager Java API (`mmcorej`).
+`config/javaclasspath.txt` is a copy of the file in the microscope PC's MATLAB `prefdir`; it lets
+MATLAB find the Micro-Manager Java API (`mmcorej`). That PC has no `librarypath.txt`; the
+Micro-Manager DLLs are found another way (probably the Windows PATH).
 
 ## `_archive/` (not tracked by git)
 

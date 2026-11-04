@@ -6,6 +6,25 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-04: code cloned to the microscope PC; config files checked
+
+Request: clone the repo to `D:\Fengyi\light_sheet_system` on the microscope PC and add the
+missing config files.
+
+- Cloned `main` to `D:\Fengyi\light_sheet_system` on the microscope PC (fine-grained token,
+  this repo only). The old copy `D:\lightSheetsourcecode_twopath_multipower` is unchanged.
+- `config/configuration_03132026.cfg`: copied the PC's
+  `C:\Program Files\Micro-Manager-1.4\configuration_03132026.cfg` over it; git showed no change,
+  so the repo copy was already the real file. It is the only cfg on that PC. The earlier warning
+  (identical to the 2019 `configuration_05302019.cfg`) only means the hardware config was not
+  changed since 2019; it was not a wrong copy.
+- `config/javaclasspath.txt` added from the PC's MATLAB `prefdir` (committed from the PC).
+  There is no `librarypath.txt` on that PC.
+- README `config/` section and TODO list updated.
+- No code changed; nothing to test on the microscope.
+
+---
+
 ## 2026-11-04: plan for splitting the app code (TODO only, no code changed)
 
 Request: the control code feels too long; is splitting it worth it?
@@ -214,7 +233,8 @@ Maintainer: Fengyi Yu. Edits were made on the analysis workstation copy
 - Added `README.md`, `docs/V5_app_guide.md` and `.gitignore`. The `.gitignore` excludes
   `_archive/`, images, `.mat` files and runtime outputs.
 - Added `config/configuration_03132026.cfg` as a backup of the Micro-Manager config.
-  **Warning:** this copy is byte-identical to the 2019 `configuration_05302019.cfg`, so
+  (Update 2026-11-04: checked on the microscope PC, it is the real file; see the newer entry.)
+  **Warning (old):** this copy is byte-identical to the 2019 `configuration_05302019.cfg`, so
   it is probably not the file the microscope really uses. Replace it with the copy from
   the microscope PC (see TODO).
 
@@ -277,10 +297,10 @@ microscope yet.
       `Button_7`, `Button_8`, `Rotation_stepDropDown`, `Rotation_stepDropDownLabel`,
       `Stage_HardwareT_EditField`, `TEditFieldLabel`. Then delete any callbacks they
       leave behind.
-- [ ] Replace `config/configuration_03132026.cfg` with the real file from the microscope PC
-      (`C:\Program Files\Micro-Manager-1.4\configuration_03132026.cfg`).
-- [ ] Copy `javaclasspath.txt` and `librarypath.txt` from the microscope PC's MATLAB
-      `prefdir` into `config/`.
+- [x] Check `config/configuration_03132026.cfg` against the microscope PC (done 2026-11-04:
+      identical, it is the only cfg there).
+- [x] Copy `javaclasspath.txt` from the microscope PC's MATLAB `prefdir` into `config/`
+      (done 2026-11-04; that PC has no `librarypath.txt`).
 - [ ] Delete the old `app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp` if it is still there.
 - [ ] Make the first git commit and push to `github.com/fengyiyu1234/light_sheet_system` (private).
 - [ ] Copy the updated files to the microscope PC and test: start-up, Live View, autofocus
