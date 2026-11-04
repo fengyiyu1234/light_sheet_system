@@ -119,20 +119,42 @@ Several properties are unused, for example `AFG_voltage1/2`, `ExtLens2_pos`,
 `checkpoints_onetile`, `xinitPos1`, `scanrow`, `exposure_time`, `flag_request_af`, `flag_request_hist`.
 All the `current_path == 2` branches are placeholders (`a=1;`), so only path 1 works.
 
-## 6. Known bugs (found by reading the code; not yet fixed)
+## 6. Known bugs
 
-| Where | Problem | Effect |
+Last checked against the code on 2026-11-04 (by reading the code; nothing was run on the
+microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
+**Med** = a feature fails or the user can be misled, **Low** = cosmetic or log only.
+
+### 6.1 Open
+
+| # | Priority | Where | Problem | Effect |
+|---|---|---|---|---|
+| 1 | High | `StopAnalogButtonPushed`, end of `SvAFG2ButtonPushed` | `ChangePowerObis(lz, 1, target_mW)`: arguments in the wrong order (the signature is `(port, power_mW, max_mW)`) | The 640 nm laser goes back to **1 mW**, not the UI power |
+| 2 | High | `ResetImagingButtonPushed` | clears `pathEditField` but not `app.dirname`; the imaging start check uses `app.dirname` | After Reset the save-folder box is empty, but the next run still saves into the old folder (can mix two samples) |
+| 3 | High | `requestoneimagefromcamera` | `while` loop waits for an image with no timeout | If the camera stops sending frames, the app hangs and must be killed |
+| 4 | Med | `dynamic_focus`, Tenengrad branch | the final `1PA` move (and the revert moves) are not followed by a wait; only the Entropy branch pauses | The first images after a Tenengrad autofocus can be taken while the detection lens is still moving |
+| 5 | Med | `ImagesavingdirectoryButtonPushed` | cancelling `uigetdir` returns `0`, which is written to `app.dirname` and `pathEditField` | Error in the callback; `app.dirname` becomes `0` |
+| 6 | Med | `startimagealltilesButtonPushed`, outer `catch` | `exist('app.waitbar','var')` and `exist('app.wait_status','var')` are always false | After an imaging error the progress window stays open |
+| 7 | Med | `RollScanButtonValueChanged` | `fwrite(controlParameters.afg, …)` is missing `app.` | Turning Roll Scan on errors before `output2 on` |
+| 8 | Med | `PaintButtonValueChanged` | `zeros(2048*21, 2048*21)` (double, about 14.8 GB); `imshow` without `Parent` | Paint can run out of memory; the image can be drawn into the wrong figure |
+| 9 | Low | `startimagealltilesButtonPushed`, Excel log | `reshape(x, V, H)`, but `createScanpattern` orders tiles z-fastest (H first); should be `reshape(x, H, V)'`. Same for the new `9_Skipped_Grid` sheet | The start/end/slice/skip grids in the xlsx are arranged wrong (the log only, not the images) |
+| 10 | Low | zero-fill loops and `fillSkippedTile` | real file names use the *measured* Y; zero-fill uses the *nominal* grid Y | If the stage lands ±1 µm off, a zero image can be added next to the real slice |
+| 11 | Low | `RunAutoFocusButtonPushed` / `dynamic_focus` with wavelength "None" | `'None' == '488'` dimension error | The error is caught and nothing happens; no message tells the user why |
+| 12 | ? | `startimagealltilesButtonPushed` | AFG ramp always uses row 2 (561 nm) Top/Bottom for every color | Per-color ramp settings are ignored (may be intentional; ask before changing) |
+
+### 6.2 Fixed or disabled
+
+| Where | Problem | Status |
 |---|---|---|
-| `SnapHistogramButtonPushed` | uses `app.TargetIntensityEditField`, which does not exist | The histogram always fails ("Error plotting histogram") |
-| `movenexttile` / `moveprevioustile` / `movenextcheck` / `moveprevcheck` | use `app.movecheckpoints1x6Spinner`, which does not exist | Keys `a` `d` `w` `s` raise an error |
-| `UITable_pathCellEdit` | uses `app.galvo_ZSlider`, which does not exist | Editing the Galvo_Z column of the path table raises an error, and the Z voltage is never sent |
-| `RollScanButtonValueChanged` | `fwrite(controlParameters.afg, …)` is missing `app.` | Turning Roll Scan on errors before `output2 on` |
-| `StopAnalogButtonPushed`, end of `SvAFG2ButtonPushed` | `ChangePowerObis(lz, 1, target_mW)`: arguments in the wrong order (the signature is `(port, power_mW, max_mW)`) | The 640 nm laser goes back to **1 mW**, not the UI power |
-| `startimagealltilesButtonPushed`, `catch` | `exist('app.waitbar','var')` is always false | After an error the progress window stays open |
-| `startimagealltilesButtonPushed`, Excel log | `reshape(all_starts, V, H)`, but `createScanpattern` orders tiles z-fastest (H first) | The start/end/slice grids in the xlsx are arranged wrong (the log only, not the images) |
-| `startimagealltilesButtonPushed` | AFG ramp always uses row 2 (561 nm) Top/Bottom for every color | Per-color ramp settings are ignored (may be intentional) |
-| zero-fill loops | real file names use the *measured* Y; zero-fill uses the *nominal* grid Y | If the stage lands ±1 µm off, a zero image can be added next to the real slice |
-| `RunAutoFocusButtonPushed` with wavelength "None" | `'None' == '488'` dimension error | The error is caught and nothing happens |
+| `dynamic_focus` (Entropy) | extra `1TP?` left a stale reply in the serial buffer; lens position reads lagged | Fixed 2026-11-03 (query removed; `readLensPos.m` added) |
+| `selfmade/getpos.m` | scientific-notation replies parsed wrongly | Fixed 2026-11-03 |
+| `createscanpatterncenterButtonPushed` | kept tile data from the previous pattern | Fixed 2026-11-03 |
+| `SnapHistogramButtonPushed` | used the missing `app.TargetIntensityEditField` | Disabled 2026-11-03 (code commented out) |
+| `UIFigureKeyPress` → `movenexttile` / `moveprevioustile` / `movenextcheck` / `moveprevcheck` | used the missing `app.movecheckpoints1x6Spinner` | Disabled 2026-11-03 (key handler commented out; the four helpers are now dead code) |
+| `UITable_pathCellEdit` | used the missing `app.galvo_ZSlider` | Disabled 2026-11-03 (Galvo_Z column locked, branch commented out) |
+
+Note: `save_checkpointButtonPushed` still uses `app.galvo_ZSlider`, but no button calls
+it (dead code), so it does not cause errors.
 
 ## 7. Refactoring ideas for future updates
 

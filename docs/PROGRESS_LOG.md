@@ -6,6 +6,20 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-04: known-bugs table re-checked; local CLAUDE.md
+
+- `docs/V5_app_guide.md` section 6 rewritten: every row was re-checked against the current
+  app code. Split into "Open" (12 rows, with a priority) and "Fixed or disabled". New open rows:
+  Reset keeps the old `app.dirname` (next run saves into the old folder), no camera timeout in
+  `requestoneimagefromcamera`, Tenengrad autofocus has no wait after its final lens move,
+  cancelling `uigetdir` sets `app.dirname = 0`, Paint canvas ~14.8 GB; the xlsx orientation
+  bug also affects the new `9_Skipped_Grid` sheet.
+- Added `CLAUDE.md` (notes for Claude Code: read this log first, backup/log rules). It is in
+  `.gitignore`, so it stays on the research drive only.
+- No code changed. Backup of the old guide: not needed (git has it).
+
+---
+
 ## 2026-11-03: Paint tile count with overlap; centred scan pattern
 
 Request: the tile count in the Painting View title ignored the 15% tile overlap, so it
@@ -221,7 +235,7 @@ microscope yet.
 - [ ] Make the first git commit and push to `github.com/fengyiyu1234/light_sheet_system` (private).
 - [ ] Copy the updated files to the microscope PC and test: start-up, Live View, autofocus
       (both methods), create scan pattern, and a short multi-tile run.
-- [ ] Update the known-bugs table in `docs/V5_app_guide.md`. Some rows there are now fixed or disabled.
+- [x] Update the known-bugs table in `docs/V5_app_guide.md` (done 2026-11-04).
 
 ### Known bugs still open
 - `StopAnalogButtonPushed` and the end of `SvAFG2ButtonPushed` call
