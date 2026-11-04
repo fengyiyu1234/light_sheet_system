@@ -6,6 +6,43 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-03: skip empty tiles (fill blank)
+
+Request: after Paint, some tiles are empty, but each tile still needed a start/end at least
+100 um apart, so empty tiles were imaged anyway. Now a tile can be marked as skipped.
+
+- New public methods in the app:
+  - `skipCurrentTile(app)`: marks the tile in `movetotileSpinner` as saved + skipped
+    (`skip = true`, `start_pos`/`end_pos` = NaN, X/Y/Z from the stage now).
+  - `skippedTiles(app)`: logical column, true for skipped tiles.
+  - `updateTileStatus(app, tile_index)`: the status/text/print code that used to be at the end
+    of `savecheckpointsButtonPushed`, now shared; shows skipped tiles as `n(skip)` / `n: skipped`.
+    "min start / max end" now uses all saved imaged tiles (it used only tiles 1..current).
+  - `fillSkippedTile(app, tile_index, zero_image)`: writes all-zero images for every layer of
+    the global z grid (min start .. max end of the imaged tiles), for every selected color
+    (640 nm Analog: every power/exposure folder). Folder and file names follow the imaging
+    code; X/Z come from the saved position, the stage is not moved.
+- `createscanpatterncenterButtonPushed`: every tile starts with `skip = false`.
+- `savecheckpointsButtonPushed`: sets `skip = false` (re-saving un-skips a tile), then calls
+  `updateTileStatus`.
+- `startimagealltilesButtonPushed`: global `start_min`/`end_max` and the time estimate use the
+  imaged tiles only; skipped tiles call `fillSkippedTile` and `continue` (no lasers, filter
+  wheel, stage or autofocus); stops if every tile is skipped; Excel log gets sheet
+  `9_Skipped_Grid` (1 = skipped).
+- **TODO (Fengyi):** add the button "skip tile (fill blank)" next to "save checkpoints" in
+  Design View; its callback is one line: `skipCurrentTile(app);`. Until then, the feature can
+  only be reached from code.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_skip_tile.mlapp`.
+- Checks: `appModel.mat` rebuilt from `document.xml` (3 callbacks + editable section changed,
+  as intended). `checkcode`: no errors; 368 warnings (was 360), the new ones are the same
+  "tile_index is also a property name" notice as the old code. The four methods were run with a
+  fake app on a 2x2 grid with tile 3 skipped: status text and prints correct, the imaging
+  "all saved" check passes, 33 layers x 3 folders (488 + two 640 Analog folders) = 99 blank
+  2048x2048 uint16 images with the expected names; re-saving tile 3 un-skipped it.
+  **Not tested on the microscope yet.**
+
+---
+
 ## 2026-11-03: reliable lens position reads (Ryan's "obj buttons don't update the table" bug)
 
 Report (Ryan Garry, Oct 8-9): moving the objective with the left/right buttons moved the
