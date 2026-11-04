@@ -6,6 +6,33 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-03: Paint tile count with overlap; centred scan pattern
+
+Request: the tile count in the Painting View title ignored the 15% tile overlap, so it
+under-counted the tiles that "create scan pattern" needs.
+
+- New public methods in the app:
+  - `scanOverlapPercent(app)`: returns 15. `createscanpatterncenterButtonPushed` now uses it
+    instead of its own `overlap = 15`, so Paint and the scan pattern always use the same value.
+  - `tilesNeeded(app, extent_px)`: tiles needed to cover `extent_px` pixels; n tiles cover
+    2048 + (n-1)*2048*0.85 px.
+- Paint, Up/Down/Left/Right and Center: the title (and the command-window print) shows the old
+  value and the needed tile count in brackets, e.g. `vertical tile: 3 (4)  horizontal tile: 2.1 (3)`.
+  The `V…_H…` numbers in the Save paint file name are unchanged (old value).
+- `selfmade/createScanpattern.m`: tile offsets are now `(0:N-1) - (N-1)/2` steps, so the grid is
+  centred on the current position for even tile counts too (before, an even grid was shifted
+  half a step towards negative X/Z). Odd counts give the same positions as before; tile order
+  is unchanged.
+- Backups: `_archive/MMcodeOrcaV2/LightSheetControl_before_paint_tilecount.mlapp`,
+  `_archive/MMcodeOrcaV2/createScanpattern_before_center.m`.
+- Checks: `appModel.mat` rebuilt from `document.xml` (7 callbacks + editable section changed,
+  as intended; a re-check finds no differences). `checkcode`: 0 syntax errors, 369 messages before
+  and after. `tilesNeeded` (the app's own code) was checked for extents from 1 to 12 tiles: n tiles
+  cover the extent and n-1 do not. `createScanpattern` was checked for 1-4 x 1-3 grids: the mean
+  position is the current position. **Not tested on the microscope yet.**
+
+---
+
 ## 2026-11-03: skip empty tiles (fill blank)
 
 Request: after Paint, some tiles are empty, but each tile still needed a start/end at least
