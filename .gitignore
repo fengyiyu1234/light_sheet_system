@@ -30,6 +30,5 @@ desktop.ini
 .DS_Store
 ~$*
 
-# Local Claude Code notes (kept on the drive, not in git)
-CLAUDE.md
-.claude/
+# Claude Code per-user settings
+.claude/settings.local.json

@@ -14,8 +14,9 @@ so they exist only on the disk where the edit was made.
   `requestoneimagefromcamera`, Tenengrad autofocus has no wait after its final lens move,
   cancelling `uigetdir` sets `app.dirname = 0`, Paint canvas ~14.8 GB; the xlsx orientation
   bug also affects the new `9_Skipped_Grid` sheet.
-- Added `CLAUDE.md` (notes for Claude Code: read this log first, backup/log rules). It is in
-  `.gitignore`, so it stays on the research drive only.
+- Added `CLAUDE.md` (notes for Claude Code: read this log first, backup/log rules). It is
+  tracked in git so claude.ai/code can read it; `.gitignore` only excludes
+  `.claude/settings.local.json`.
 - No code changed. Backup of the old guide: not needed (git has it).
 
 ---
