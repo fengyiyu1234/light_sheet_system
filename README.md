@@ -8,6 +8,7 @@ The current production GUI is
 `MMcodeOrcaV2/LightSheetControl.mlapp` (renamed in Nov 2026 from
 `app_for_lightsheet_V2_main_autofocus_autopower_V5.mlapp`; the code is the same).
 For a walkthrough of what the app does internally, see [docs/V5_app_guide.md](docs/V5_app_guide.md).
+For a record of the changes made and the open TODOs, see [docs/PROGRESS_LOG.md](docs/PROGRESS_LOG.md).
 
 ## How to start the microscope
 
