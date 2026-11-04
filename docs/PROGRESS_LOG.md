@@ -6,6 +6,22 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-04: "skip tile (fill blank)" button added in Design View
+
+Request: add the skip-tile button (TODO from 2026-11-03).
+
+- Fengyi added the button in App Designer Design View (Mac, R2026b) next to "save checkpoints":
+  component `skiptilesButton`, callback `skiptilesButtonPushed` = `skipCurrentTile(app);`.
+  The 2026-11-03 TODO is done. The unused controls (TODO list) are not deleted yet.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_add_skip_button.mlapp` (taken from
+  git HEAD after the edit, since the edit was made before the backup).
+- Checks: callback present in both `document.xml` and `appModel.mat`; checkcode 370 warnings
+  before and after (HEAD also had 370; the 367 in older entries was before later edits), no new
+  ones; `minimumSupportedMATLABRelease` still R2018a.
+- Not tested on the microscope.
+
+---
+
 ## 2026-11-04: code cloned to the microscope PC; config files checked
 
 Request: clone the repo to `D:\Fengyi\light_sheet_system` on the microscope PC and add the
@@ -139,7 +155,7 @@ Request: after Paint, some tiles are empty, but each tile still needed a start/e
   imaged tiles only; skipped tiles call `fillSkippedTile` and `continue` (no lasers, filter
   wheel, stage or autofocus); stops if every tile is skipped; Excel log gets sheet
   `9_Skipped_Grid` (1 = skipped).
-- **TODO (Fengyi):** add the button "skip tile (fill blank)" next to "save checkpoints" in
+- **TODO (Fengyi):** (done 2026-11-04) add the button "skip tile (fill blank)" next to "save checkpoints" in
   Design View; its callback is one line: `skipCurrentTile(app);`. Until then, the feature can
   only be reached from code.
 - Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_skip_tile.mlapp`.

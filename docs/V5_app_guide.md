@@ -70,8 +70,8 @@ Keyboard shortcuts (`UIFigureKeyPress`):
    step is 0.65 µm/px x 2048 px x 85 % (15 % overlap), and the status lamp turns green.
 2. For each tile, use **move to tile** (or `a`/`d`). Set **start** (`k`) and **end** (`l`)
    depth (stage Y; the start must be the smaller value), then press **save checkpoints** (`space`).
-   For an **empty tile**, press **skip tile (fill blank)** instead (method `skipCurrentTile`;
-   the button still has to be added in Design View). No start/end is needed. During imaging
+   For an **empty tile**, press **skip tile (fill blank)** instead (`skiptilesButton`, calls
+   `skipCurrentTile`; added 2026-11-04). No start/end is needed. During imaging
    the tile is not imaged: `fillSkippedTile` writes an all-zero image for every layer of the
    global z grid, for every selected color, in the usual folders (X/Z from the position saved
    with the tile; the stage is not moved). Saving checkpoints on the tile later un-skips it.
