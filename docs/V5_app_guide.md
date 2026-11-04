@@ -129,9 +129,6 @@ microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
 
 | # | Priority | Where | Problem | Effect |
 |---|---|---|---|---|
-| 1 | High | `StopAnalogButtonPushed`, end of `SvAFG2ButtonPushed` | `ChangePowerObis(lz, 1, target_mW)`: arguments in the wrong order (the signature is `(port, power_mW, max_mW)`) | The 640 nm laser goes back to **1 mW**, not the UI power |
-| 2 | High | `ResetImagingButtonPushed` | clears `pathEditField` but not `app.dirname`; the imaging start check uses `app.dirname` | After Reset the save-folder box is empty, but the next run still saves into the old folder (can mix two samples) |
-| 3 | High | `requestoneimagefromcamera` | `while` loop waits for an image with no timeout | If the camera stops sending frames, the app hangs and must be killed |
 | 4 | Med | `dynamic_focus`, Tenengrad branch | the final `1PA` move (and the revert moves) are not followed by a wait; only the Entropy branch pauses | The first images after a Tenengrad autofocus can be taken while the detection lens is still moving |
 | 5 | Med | `ImagesavingdirectoryButtonPushed` | cancelling `uigetdir` returns `0`, which is written to `app.dirname` and `pathEditField` | Error in the callback; `app.dirname` becomes `0` |
 | 6 | Med | `startimagealltilesButtonPushed`, outer `catch` | `exist('app.waitbar','var')` and `exist('app.wait_status','var')` are always false | After an imaging error the progress window stays open |
@@ -146,6 +143,9 @@ microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
 
 | Where | Problem | Status |
 |---|---|---|
+| `StopAnalogButtonPushed`, `SvAFG2ButtonPushed` | `ChangePowerObis` arguments in the wrong order; 640 nm went to 1 mW | Fixed 2026-11-04 (not tested on the microscope) |
+| `ResetImagingButtonPushed` | kept the old `app.dirname`, so the next run saved into the old folder | Fixed 2026-11-04 (not tested on the microscope) |
+| camera frame-wait loops (`requestoneimagefromcamera`, Paint, Up/Down/Left/Right, Center) | no timeout; app hung if the camera sent no frame | Fixed 2026-11-04: `checkCameraTimeout` (not tested on the microscope) |
 | `dynamic_focus` (Entropy) | extra `1TP?` left a stale reply in the serial buffer; lens position reads lagged | Fixed 2026-11-03 (query removed; `readLensPos.m` added) |
 | `selfmade/getpos.m` | scientific-notation replies parsed wrongly | Fixed 2026-11-03 |
 | `createscanpatterncenterButtonPushed` | kept tile data from the previous pattern | Fixed 2026-11-03 |

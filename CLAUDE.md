@@ -34,9 +34,32 @@ project memory; Claude Code's own memory is per machine and per path and is usua
    `appdesigner/appModel.mat`. Both must match after an edit (previous entries rebuilt
    `appModel.mat` from `document.xml` and compared callbacks). Run `checkcode` and compare the
    warning count with the previous one.
+   Scripted edit (done 2026-11-04, worked): `s = load('appModel.mat')`; code is in
+   `s.code.EditableSectionCode` (cell of lines) and `s.code.Callbacks(i).Code` (by `.Name`),
+   lines keep full indentation; `save(..., '-struct', 's', '-v7')`. Put the same text into the
+   single CDATA block of `document.xml` (LF line endings), re-zip keeping the entry order.
+   Verify every block appears verbatim in `document.xml`; read the XML as UTF-8
+   (`fopen(...,'r','n','UTF-8')`), since `fileread` mis-decodes `µ` and gives false mismatches.
 3. UI controls (adding/removing buttons) must be done by the user in App Designer Design View;
    write the needed steps as a TODO instead.
 4. After every change, add an entry at the top of `docs/PROGRESS_LOG.md` in the same format:
    request, what changed, backup path, checks, and whether it was tested on the microscope.
 5. If a bug is fixed or found, update the table in `docs/V5_app_guide.md` section 6.
 6. Do not commit or push unless the user asks.
+
+## MATLAB version compatibility (R2019)
+The microscope PC runs **MATLAB R2019** (a or b, not yet confirmed); the app was last saved
+with R2026a (workstation) and may be edited in R2026a on the Mac. All code must run on R2019a.
+- Do not use functions or syntax added after R2019a, e.g. `serialport`/`readline`/`writeline`
+  (R2019b), `arguments` blocks (R2019b), `matches` (R2019b), `tiledlayout`/`nexttile` (R2019b),
+  `exportapp`, `uistyle`/`addStyle`, `clim`, `fontsize`, `dictionary`, `isMATLABReleaseOlderThan`,
+  new-style `wentropy` options. Check the "Introduced in" line of the MathWorks docs when unsure.
+- Serial ports use the old `serial` object (`fprintf`/`fscanf`/`flushinput`).
+- DAQ uses the old Session interface (`daq.createSession`). Ignore the checkcode warning
+  "'Session' class will be removed ... use 'daq'": the `daq` interface needs R2020a.
+- MATLAB on the Mac: `/Applications/MATLAB_R2026b.app/bin/matlab -batch "..."` (for checkcode).
+- Already used and OK (R2019a or older): `readcell`, `writecell`, `writematrix`, `readtable`,
+  `writetable`, `uiprogressdlg`, `contains`, `startsWith`, `seconds`, `convertCharsToStrings`.
+- Do not add App Designer components or properties newer than R2019a. After saving the
+  `.mlapp`, unzip it and check that `metadata/appMetadata.xml` still has
+  `minimumSupportedMATLABRelease` R2019a or older (it was R2018a on 2026-11-04).

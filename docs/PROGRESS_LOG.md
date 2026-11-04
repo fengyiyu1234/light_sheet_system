@@ -6,6 +6,29 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-04: fixed high-priority bugs 1-3 (applied by script)
+
+Request: fix the three High bugs in `docs/V5_app_guide.md` 6.1, without manual copy-paste.
+
+- Bug 1: `StopAnalogButtonPushed` / `SvAFG2ButtonPushed`: `ChangePowerObis(port, target_mW, maxPower)`
+  (4 lines; the arguments were in the wrong order, so the 640 nm laser went to 1 mW).
+- Bug 2: `ResetImagingButtonPushed` also sets `app.dirname = 'D:\Data'` (start-up value), so imaging
+  asks for a new folder after Reset.
+- Bug 3: new method `checkCameraTimeout(app, t0)` (error after 5 s + exposure); called in the 7
+  frame-wait loops: `requestoneimagefromcamera`, Paint, Up/Down/Left/Right, Center.
+  (`EnableCamButtonPushed` already had a 5 s timeout.)
+- How: MATLAB R2026b (Mac) script edited `code` in `appdesigner/appModel.mat` (9 callbacks + editable
+  section; each edit had to match exactly); `matlab/document.xml` got the same text; the other zip
+  entries were copied unchanged. The steps are kept in `docs/patches/2026-11-04_high_priority_bugs.md`.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_high_bugs.mlapp`.
+- Checks: all 76 code blocks in `appModel.mat` (editable section, startup, 74 callbacks) appear
+  verbatim in `document.xml`; only the 9 intended callbacks + editable section changed;
+  `checkcode`: 369 messages, as before (3 existing ALIGN notices moved by the inserted lines),
+  no syntax errors; `minimumSupportedMATLABRelease` still R2018a. **Not yet opened in App Designer;
+  not tested on the microscope.**
+
+---
+
 ## 2026-11-04: known-bugs table re-checked; local CLAUDE.md
 
 - `docs/V5_app_guide.md` section 6 rewritten: every row was re-checked against the current
