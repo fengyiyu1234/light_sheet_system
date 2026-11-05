@@ -21,8 +21,8 @@ find them in App Designer's Code View or with Ctrl+F.
 | Sheet | Property / UI table | Contents |
 |---|---|---|
 | 1 | `state_stage` | X Y Z T (overwritten with live stage values right away) |
-| 2 | `state_path` / `UITable_path` | Galvo X/Y/Z voltage for the current path |
-| 3 | `state_motor` / `UITable_motor` | Excitation / detection lens positions (mm) |
+| 2 | `state_path` | Galvo X/Y/Z voltage per path. Galvo X/Y of path 1 are shown in `UITable_path` (since 2026-11-05 one 1x4 table GalvoX / GalvoY / Excitation / Detection, filled by `refreshPathMotorTable`) |
+| 3 | `state_motor` | Excitation (row 1, ExtLens1) / ExtLens2 (row 2) / detection (row 3) lens positions (mm). Rows 1 and 3 are shown in `UITable_path`; `UITable_motor` is hidden by `applyLayout` (2026-11-05) |
 | 4 | `state_afg` / `UITable_afg` | AFG offset 1/2, ramp top/bottom (mV) per color |
 | 5 | `state_offset` / `UITable_offset` | **Per-color calibration**: Galvo_X/Y/Z, Detectionlens, Excitionlens. Rows 1–4 = 488/561/640/730 |
 | 7 | `HDPRTable` | 640 nm analog mode: power list (row 2) and exposure list (row 3) |
@@ -157,7 +157,7 @@ microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
 | `createscanpatterncenterButtonPushed` | kept tile data from the previous pattern | Fixed 2026-11-03 |
 | `SnapHistogramButtonPushed` | used the missing `app.TargetIntensityEditField` | Disabled 2026-11-03 (code commented out) |
 | `UIFigureKeyPress` → `movenexttile` / `moveprevioustile` / `movenextcheck` / `moveprevcheck` | used the missing `app.movecheckpoints1x6Spinner` | Disabled 2026-11-03 (key handler commented out; the four helpers are now dead code) |
-| `UITable_pathCellEdit` | used the missing `app.galvo_ZSlider` | Disabled 2026-11-03 (Galvo_Z column locked, branch commented out) |
+| `UITable_pathCellEdit` | used the missing `app.galvo_ZSlider` | Disabled 2026-11-03 (Galvo_Z column locked, branch commented out); rewritten 2026-11-05 for the merged table (no Galvo_Z column) |
 
 Note: `save_checkpointButtonPushed` still uses `app.galvo_ZSlider`, but no button calls
 it (dead code), so it does not cause errors.

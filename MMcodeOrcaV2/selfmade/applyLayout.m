@@ -96,17 +96,16 @@ put(app.ObjStepsizeDropDown,      lens, [86 8 62 22]);
 put(app.leftButtonObj,            lens, [156 8 64 22]);
 put(app.rightButtonObj,           lens, [226 8 64 22]);
 
-% Galvo_Z is not used: its column stays in the data (it is sent to the DAQ) but is not shown
-put(app.UITable_path,  p1, [6 T-325 150 96]);
+% (2026-11-05) one 1x4 table GalvoX / GalvoY / Excitation / Detection (filled by
+% refreshPathMotorTable in the app); the old lens table UITable_motor is hidden
+put(app.UITable_path,  p1, [6 T-284 300 56]);
 app.UITable_path.FontSize = 12;
-app.UITable_path.ColumnWidth = {44, 50, 50, 0};
-put(app.UITable_motor, p1, [160 T-325 146 96]);
-app.UITable_motor.FontSize = 12;
-app.UITable_motor.ColumnWidth = {44, 84};
-put(app.UITable_offset, p1, [6 T-475 300 145]);
+app.UITable_path.ColumnWidth = {70, 70, 76, 76};
+app.UITable_motor.Visible = 'off';
+put(app.UITable_offset, p1, [6 T-438 300 145]);
 app.UITable_offset.FontSize = 12;
 app.UITable_offset.ColumnWidth = {48, 54, 54, 0, 64, 64};
-put(app.saveoffsetfordifferentcolorButton, p1, [6 T-508 200 26]);
+put(app.saveoffsetfordifferentcolorButton, p1, [6 T-471 200 26]);
 
 % Roll is not used: hidden (callbacks unchanged)
 app.RollSlider.Visible = 'off';

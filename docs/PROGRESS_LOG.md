@@ -6,6 +6,48 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-05: path and motor tables merged into one 1x4 table
+
+Request: the path table (Path / Galvo_X / Galvo_Y) and the lens table (Lens / Position(mm))
+were too redundant; replace them with one table with columns GalvoX, GalvoY, Excitation,
+Detection (header + one row).
+
+- New public method `refreshPathMotorTable(app)`: `UITable_path.Data` =
+  `[state_path.Galvo_X(1), state_path.Galvo_Y(1), state_motor.MotorPosition_mm_(1), state_motor.MotorPosition_mm_(3)]`
+  (path 1, ExtLens1, detection lens). All 4 `UITable_path.Data = app.state_path` and 6
+  `UITable_motor.Data = app.state_motor` lines now call it (the two in `startupFcn` became one
+  call). `app.state_path` / `app.state_motor` themselves are unchanged (DAQ output, offsets,
+  autofocus still use them).
+- `startupFcn`: `UITable_path.ColumnName = {'GalvoX'; 'GalvoY'; 'Excitation'; 'Detection'}`,
+  all 4 columns editable (set in code, so the Design View table was not changed).
+- `UITable_pathCellEdit` rewritten: columns 1-2 set galvo X/Y of path 1 (same checks and DAQ
+  output as before; the path-2 branch is gone since path 2 is not shown); columns 3-4 send
+  `1PA` to ExtLens1 / the detection lens (same 0.00001-10 mm check as the old
+  `UITable_motorCellEdit`) and then **read the real position with `readLensPos`** into
+  `state_motor` (the old motor table never updated `state_motor` after an edit). On a rejected
+  value the table is refreshed back to the stored value before the error.
+- `selfmade/applyLayout.m`: `UITable_path` at `[6 T-284 300 56]`, column widths 70/70/76/76;
+  `UITable_motor` hidden (`Visible off`; its callback is now unused); the offset table and
+  "save offset" button moved up 37 px into the freed space.
+- Edited by script (`appModel.mat` editable section + startup + callbacks, and `document.xml`;
+  every replacement found the same number of times in both); re-zipped with .NET in the
+  original entry order. Note for scripts: `strsplit(..., newline)` must use
+  `'CollapseDelimiters', false`, otherwise blank lines are dropped and the check fails.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_merge_tables.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/applyLayout_before_merge_tables.m`,
+  `_archive/docs/*_before_merge_tables.md`.
+- Checks: editable section, startup and all 70 callbacks of `appModel.mat` appear verbatim in
+  `document.xml`; the unzipped new `.mlapp` matches the edited files; checkcode R2026b
+  366 -> 366 and R2019a 347 -> 347 (only line shifts of the 3 ALIGN notices); applyLayout 0
+  messages; `minimumSupportedMATLABRelease` R2018a. A test uitable with the same settings shows
+  header + one row without a scroll bar (R2026b).
+- **Not tested on the microscope.** To check there: the table shows the four values at
+  startup; moving the galvo sliders/◀▶, the lens ◀/▶ buttons and choosing a colour update it;
+  typing a value in each of the four cells moves the galvo / lens and the cell then shows the
+  read-back position.
+
+---
+
 ## 2026-11-05: Tenengrad autofocus waits for the lens after its last move (bug 4)
 
 Request: fix "Tenengrad autofocus has no wait after its final lens move".
