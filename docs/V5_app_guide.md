@@ -46,14 +46,17 @@ write is `outputSingleScan(s1, [shutter, galvoX, galvoY, galvoZ])`.
 | galvo_X / galvo_Y sliders, Reset | `galvo_*SliderValueChanged`, `Reset_galvo_XYButtonPushed` | Writes galvo voltages directly |
 | Filter wheel | `FilterwheelValueChanged` | `pos=1..6` |
 | Enable / Disable Camera | `EnableCamButtonPushed`, `DisableCamButtonPushed` | Live View: a blocking `while` loop in `EnableCam` that runs until `myhandles.continue = false` |
-| Live View buttons | `RunAutoFocusButtonPushed`, `ShowGridCheckBoxValueChanged`, `SnapHistogramButtonPushed`, `ImagecontrastValueChanged`, `Exposure_timeEditFieldValueChanged` | Tools that work while Live View is open |
+| Live View tools | `ShowGridCheckBoxValueChanged`, `SnapHistogramButtonPushed`, `ImagecontrastValueChanged`, `Exposure_timeEditFieldValueChanged` | Tools that work while Live View is open. **Show Grid** shows a centre crosshair (since 2026-11-04 directly on the main window; the "Live View Buttons" panel and Run AutoFocus were removed) |
 | Stage arrows ⏫⏬⍟⌾⏪⏩↺↻, step dropdowns, Get Position | `Button*_Pushed`, `*_stepDropDownValueChanged`, `GetPositionButtonPushed` | Relative stage moves. Moves are blocked while the status lamp is green (a scan pattern is active), except depth (Y) moves |
 | Excitation / Detection lens | `left/rightButtonExt/Obj`, `Ext/ObjStepsizeDropDown` | Newport relative moves (`1PR`), then reads the position back with `readLensPos` (discards stale replies, waits until the motor stops) |
 | save offset for different color | `saveoffsetfordifferentcolorButtonPushed` | Reads both lens positions from the motors, then copies the galvo and lens values into the selected color's row of `UITable_offset` (in memory only) |
 | Paint Mode (Paint, Up/Down/Left/Right, Center, Save paint) | `PaintButtonValueChanged`, `Up/Down/Left/RightButtonPushed`, `CenterButtonPushed`, `SavepaintButtonPushed` | Builds a stitched overview on a 21x21-tile canvas (0.65 µm/px) to find the sample and center it |
 | AFG_scan, Roll Scan / Roll slider | `AFG_scanButtonValueChanged`, `RollScan*`, `RollSlider*` | Turns the light-sheet ramp on AFG ch1 on or off; roll uses ch2 |
 | **M-by-N tiles panel** | see section 3 | Multi-tile z-stack acquisition |
-| 640 nm analog tools: SaveImAFG2, SaveImCam, TestTrigger, AFG_Manual_mW, StopAnalog, SvAFG2 | same names + `Pushed`/`ValueChanged` | Development tools for driving the 640 nm laser in analog mode from the Siglent `afg2`, with hardware camera triggering. `SvAFG2` runs a full exposure x power matrix from `HDPRTable` column 3 |
+| 640 nm analog tools: StopAnalog, SvAFG2 | `StopAnalogButtonPushed`, `SvAFG2ButtonPushed` | **StopAnalog** returns the 640 nm laser to CW, sets `afg2` ch1/ch2 to 0 V DC and the camera to internal trigger (use it if 640 nm Analog imaging stops with an error). **SvAFG2** runs a full exposure x power matrix from `HDPRTable` column 3 at the current position. The colleague's test controls SaveImAFG2, SaveImCam, TestTrigger and AFG_Manual_mW were removed on 2026-11-04 (code in `_archive/MMcodeOrcaV2/LightSheetControl_before_remove_test_callbacks.mlapp`). `isAnalogMode` is still set by StopAnalog but never read. The 640 nm Analog *imaging* mode (Mode 640nm = Analog: two light intensities for the 640 nm channel) is in `startimagealltilesButtonPushed` and does not use these buttons; **do not change it** |
+| Paint tile grid (2026-11-04) | `drawPaintTileGrid`, `selfmade/paintTileGrid.m` | In the Paint view, orange boxes show the Vertical x Horizontal tiles that create scan pattern would make at the current position (15 % overlap, numbered); redrawn after every Paint move and when the tile fields change |
+| export tiles / import tiles (2026-11-04) | `exportTiles`, `importTiles` (bound to `exporttilesButton` / `importtilesButton` in `startupFcn`), `selfmade/writeTileList.m`, `readTileList.m` | xlsx with sheets `Tiles` (one row per tile: saved, skip, start/end, stage X/Y/Z, path, planned X/Y/Z) and `Grid`; importing makes it the current scan pattern. `imaging_params_*.xlsx` also gets these sheets |
+| command-window log (2026-11-04) | `startLog`, `selfmade/flushDiary.m` | `diary` to `<repo>\logs\` at start-up, moved to `<output folder>\matlab_log_<date>.txt` when the saving directory is chosen; written to disk every 30 s and after every tile |
 
 Keyboard shortcuts (`UIFigureKeyPress`):
 - `a`/`d`: previous/next tile
@@ -130,19 +133,19 @@ microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
 | # | Priority | Where | Problem | Effect |
 |---|---|---|---|---|
 | 4 | Med | `dynamic_focus`, Tenengrad branch | the final `1PA` move (and the revert moves) are not followed by a wait; only the Entropy branch pauses | The first images after a Tenengrad autofocus can be taken while the detection lens is still moving |
-| 5 | Med | `ImagesavingdirectoryButtonPushed` | cancelling `uigetdir` returns `0`, which is written to `app.dirname` and `pathEditField` | Error in the callback; `app.dirname` becomes `0` |
 | 6 | Med | `startimagealltilesButtonPushed`, outer `catch` | `exist('app.waitbar','var')` and `exist('app.wait_status','var')` are always false | After an imaging error the progress window stays open |
 | 7 | Med | `RollScanButtonValueChanged` | `fwrite(controlParameters.afg, …)` is missing `app.` | Turning Roll Scan on errors before `output2 on` |
 | 8 | Med | `PaintButtonValueChanged` | `zeros(2048*21, 2048*21)` (double, about 14.8 GB); `imshow` without `Parent` | Paint can run out of memory; the image can be drawn into the wrong figure |
 | 9 | Low | `startimagealltilesButtonPushed`, Excel log | `reshape(x, V, H)`, but `createScanpattern` orders tiles z-fastest (H first); should be `reshape(x, H, V)'`. Same for the new `9_Skipped_Grid` sheet | The start/end/slice/skip grids in the xlsx are arranged wrong (the log only, not the images) |
 | 10 | Low | zero-fill loops and `fillSkippedTile` | real file names use the *measured* Y; zero-fill uses the *nominal* grid Y | If the stage lands ±1 µm off, a zero image can be added next to the real slice |
-| 11 | Low | `RunAutoFocusButtonPushed` / `dynamic_focus` with wavelength "None" | `'None' == '488'` dimension error | The error is caught and nothing happens; no message tells the user why |
 | 12 | ? | `startimagealltilesButtonPushed` | AFG ramp always uses row 2 (561 nm) Top/Bottom for every color | Per-color ramp settings are ignored (may be intentional; ask before changing) |
 
 ### 6.2 Fixed or disabled
 
 | Where | Problem | Status |
 |---|---|---|
+| `ImagesavingdirectoryButtonPushed` (was open bug 5) | cancelling `uigetdir` wrote `0` to `app.dirname` and `pathEditField` | Fixed 2026-11-04: cancel keeps the old folder (not tested on the microscope) |
+| `RunAutoFocusButtonPushed` (was open bug 11) | wavelength "None" gave a dimension error in `dynamic_focus` | Gone 2026-11-04: the Run AutoFocus button and callback were removed (imaging always passes a real colour) |
 | `StopAnalogButtonPushed`, `SvAFG2ButtonPushed` | `ChangePowerObis` arguments in the wrong order; 640 nm went to 1 mW | Fixed 2026-11-04 (not tested on the microscope) |
 | `ResetImagingButtonPushed` | kept the old `app.dirname`, so the next run saved into the old folder | Fixed 2026-11-04 (not tested on the microscope) |
 | camera frame-wait loops (`requestoneimagefromcamera`, Paint, Up/Down/Left/Right, Center) | no timeout; app hung if the camera sent no frame | Fixed 2026-11-04: `checkCameraTimeout` (not tested on the microscope) |

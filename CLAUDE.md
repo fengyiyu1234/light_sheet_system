@@ -46,6 +46,9 @@ project memory; Claude Code's own memory is per machine and per path and is usua
    request, what changed, backup path, checks, and whether it was tested on the microscope.
 5. If a bug is fixed or found, update the table in `docs/V5_app_guide.md` section 6.
 6. Do not commit or push unless the user asks.
+7. Do not change the **640 nm Analog mode** (Mode 640nm = Analog in `startimagealltilesButtonPushed`:
+   the 640 nm channel is imaged at two light intensities, for samples with poor antibody
+   penetration). Fengyi says it is very important. If another change must touch that code, ask first.
 
 ## MATLAB version compatibility (R2019)
 The microscope PC runs **MATLAB R2019** (a or b, not yet confirmed); the app was last saved

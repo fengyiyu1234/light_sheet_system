@@ -32,3 +32,6 @@ desktop.ini
 
 # Claude Code per-user settings
 .claude/settings.local.json
+
+# Command-window logs written by the app at start-up (startLog)
+logs/

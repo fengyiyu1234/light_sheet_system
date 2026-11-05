@@ -6,6 +6,109 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-04: colleague's test controls removed; export/import tiles buttons bound
+
+Request: remove the controls Fengyi does not use (all except Show Grid); keep the 640 nm Analog
+mode (two light intensities for the 640 nm channel, for poor antibody penetration) unchanged.
+
+- Fengyi in Design View (R2026b, Mac): deleted `SaveImAFG2Button`, `SaveImCamButton`,
+  `TestTriggerButton`, `AFG_Manual_mWEditField` (+ label), `RunAutoFocusButton` and the
+  "Live View Buttons" panel (`ShowGridCheckBox` moved onto the main window, callback still bound);
+  added `importtilesButton` ("import tiles") and `exporttilesButton` ("export tiles") in the
+  M-by-N tiles panel, without callbacks.
+- By script: deleted the 5 callbacks left unassociated (`RunAutoFocusButtonPushed`,
+  `SaveImAFG2ButtonPushed`, `SaveImCamButtonPushed` with its nested helpers,
+  `TestTriggerButtonPushed`, `AFG_Manual_mWEditFieldValueChanged`; 558 lines) from both
+  `document.xml` and `appModel.mat`. `startupFcn` now sets
+  `exporttilesButton.ButtonPushedFcn = @(src, event) exportTiles(app)` and the same for
+  `importtilesButton` / `importTiles`, so no Design View callback is needed. (If callbacks are
+  added in Design View later, remove these two lines.)
+- Not done, on purpose: `isAnalogMode` is kept, because removing it means editing
+  `StopAnalogButtonPushed` (part of the 640 nm analog tools). No change to the 640 nm Analog code.
+- Backup (the Design View save, before the script): 
+  `_archive/MMcodeOrcaV2/LightSheetControl_before_remove_test_callbacks.mlapp`; docs:
+  `_archive/docs/*_before_remove_test_callbacks.md`.
+- Checks: every remaining block verified verbatim in `document.xml` (70 callbacks, startup,
+  editable section); `startimagealltilesButtonPushed`, `SvAFG2ButtonPushed`,
+  `StopAnalogButtonPushed`, `ShowGridCheckBoxValueChanged` and the editable section are byte-for-byte
+  unchanged, and no other callback changed; checkcode 378 -> 365, no new messages (3 ALIGN notices
+  moved); `minimumSupportedMATLABRelease` R2018a.
+- **Not tested on the microscope.**
+
+---
+
+## 2026-11-04: export/load tile list (xlsx), tile grid in Paint, command-window log file
+
+Requests: (1) a button that writes the saved tiles' start/end to an xlsx file, and a button that
+reads such a file back as the imaging parameters of the current sample; (2) in Paint, show the
+tile grid for a given Vertical x Horizontal tile count, with the tile overlap and correct
+odd/even centring; (3) save everything printed in the command window (errors, warnings) as a
+log in the output folder, because MATLAB sometimes crashes and closes; (4) what are the
+colleague's test controls next to "Live View Buttons".
+
+- **Tile list xlsx** (new `selfmade/writeTileList.m`, `selfmade/readTileList.m`; app methods
+  `exportTiles`, `importTiles`). Sheet `Tiles`: one row per tile in scan-pattern order (Z
+  fastest): `Tile, Saved, Skip, Start_um, End_um, X_um, Y_um, Z_um, LightPath, PlanX_um,
+  PlanY_um, PlanZ_um`. Sheet `Grid`: `VerticalTiles, HorizontalTiles, ZStep_um, NumTiles,
+  Written`. Loading replaces `xyzScanArray` and `checkpoints_multipletile`, sets the
+  Vertical/Horizontal fields, turns the lamp green and updates the Tile States box, so
+  "start image all tiles" can run directly. Coordinates are absolute (the sample must not
+  have moved). The z step in the file is shown but not applied. `start image all tiles` also
+  writes the two sheets into `imaging_params_*.xlsx`, so that file can be loaded too.
+  **The two buttons do not exist yet** (see TODO).
+- **Paint tile grid** (new `selfmade/paintTileGrid.m`, app method `drawPaintTileGrid`): after
+  Paint, Up/Down/Left/Right and Center, and when the Vertical/Horizontal tile field changes
+  (`ValueChangedFcn` set in `startupFcn`), the Paint view shows the V x H tiles that create scan
+  pattern would make at the current stage position: orange 2048 px boxes with tile numbers,
+  15 % overlap visible as bands, title line with the grid size in mm. Positions come from
+  `createScanpattern`, so odd/even centring and numbering match the real scan pattern. 0 tiles =
+  no grid. Not related to the Live View "Show Grid" checkbox (that is only a centre crosshair).
+- **Log**: app method `startLog` uses `diary`. At start-up the log goes to `<repo>\logs\`
+  (added to `.gitignore`); choosing "Image saving directory" (and start image all tiles, if
+  needed) moves it to `<output folder>\matlab_log_<date>.txt`, copying the session so far into
+  it. `selfmade/flushDiary.m` (diary off/on) writes it to disk every 30 s (timer
+  `LightSheetLogTimer`) and after every tile; on an imaging error the full `getReport` stack is
+  printed into the log.
+- Bug 5 fixed on the way: cancelling "Image saving directory" no longer sets `app.dirname = 0`.
+- Colleague's controls explained (answer only, nothing removed): see TODO.
+- Edited by script (16 edits: editable section, `startupFcn`, `ImagesavingdirectoryButtonPushed`,
+  `startimagealltilesButtonPushed`, Paint/Up/Down/Left/Right/Center), both `document.xml` and
+  `appModel.mat`; every block verified verbatim in `document.xml`; only these 8 callbacks +
+  startup + editable section changed. Zip entry order kept.
+- Backups: `_archive/MMcodeOrcaV2/LightSheetControl_before_tilelist_grid_log.mlapp`,
+  `_archive/docs/PROGRESS_LOG_before_tilelist_grid_log.md`,
+  `_archive/docs/V5_app_guide_before_tilelist_grid_log.md`, `_archive/gitignore_before_logs.txt`.
+- Checks: checkcode 378 (was 370): the 8 new ones are `datestr`/`now` "not recommended" (used the
+  same way elsewhere; fine on R2019a); 3 ALIGN notices only moved. New `.m` files: 0 messages
+  except `datestr`/`now`. `minimumSupportedMATLABRelease` still R2018a. Tested on the Mac (R2026b):
+  xlsx write -> read round trip (saved, skipped, unsaved tiles; adding the sheets to an existing
+  file keeps its other sheets; V x H mismatch gives an error); `paintTileGrid` for 1-4 x 1-4 tiles
+  (grid centred on the current position, centres 0.85 x 2048 px apart); the grid drawing code on
+  a fake Paint figure (3 x 4 and 2 x 2, redraw replaces the old grid); `flushDiary` puts the text
+  on disk while the diary stays on.
+- **Not tested on the microscope**, and not opened in App Designer yet.
+
+---
+
+## 2026-11-04: Tile States box shows each saved tile's z range; no command-window print
+
+Request: when saving tile z start/end, show each tile's range in the "Saved Tiles List" line,
+e.g. `Saved Tiles List: 1(-200 -- 1000)`; do not print to the terminal.
+
+- `updateTileStatus`: line 3 of `TileStatesTextArea` is now
+  `Saved Tiles List: 1(-200 -- 1000)  2(skip)  3(... -- ...)` (start_pos -- end_pos per saved
+  tile; skipped tiles still show `(skip)`). The `fprintf` block that printed the tiles to the
+  command window was removed. Lines 1-2 unchanged (line 1 still ends with "Yes"/"No", which the
+  imaging button checks).
+- Edited by script (both `document.xml` and `appModel.mat`; note: `strsplit` needs
+  `'CollapseDelimiters', false`, otherwise blank lines are lost). Editable section 685 -> 667 lines,
+  verified verbatim in `document.xml`, all callbacks match.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_tile_range_list.mlapp`.
+- Checks: checkcode 370 warnings, same messages as before; `minimumSupportedMATLABRelease` R2018a.
+- Not tested on the microscope.
+
+---
+
 ## 2026-11-04: "skip tile (fill blank)" button added in Design View
 
 Request: add the skip-tile button (TODO from 2026-11-03).
@@ -307,6 +410,19 @@ number of warnings as before (367). None of the changes have been tested on the
 microscope yet.
 
 ### TODO
+- [x] (done 2026-11-04) (added 2026-11-04) In App Designer Design View, add two buttons (e.g. in the M-by-N tiles
+      panel, next to "save checkpoints"), add a ButtonPushed callback to each and type one line:
+      "export tiles" -> `exportTiles(app);`, "load tiles" -> `importTiles(app);`. Save, then check
+      `minimumSupportedMATLABRelease` is still R2018a.
+- [x] (done 2026-11-04) (added 2026-11-04, decided by Fengyi) Delete the colleague's test controls next to "Live
+      View Buttons" in Design View: `SaveImAFG2Button`, `SaveImCamButton`, `TestTriggerButton`,
+      `AFG_Manual_mWEditField` (+ label), `RunAutoFocusButton`. Keep `ShowGridCheckBox`, `SvAFG2`
+      and `StopAnalog`. Then (Claude, by script) delete the callbacks left behind and the
+      property `isAnalogMode` (only those callbacks use it). Checked: none of these controls
+      is used by the 640 nm Analog imaging.
+      **Do not change the 640 nm Analog mode** (Mode 640nm = Analog in "start image all tiles":
+      the 640 nm channel is imaged at two light intensities, for samples with poor antibody
+      penetration; very important to Fengyi). No auto-restore in the imaging `catch` either.
 - [ ] In App Designer Design View, delete the unused controls and save:
       `UITable_afg`, `SnapHistogramButton`, `save_DButton`, `nm_D488`, `nm_D561`,
       `nm_D640`, `nm_DEditFieldLabel`, `nm_DEditField_2Label`, `nm_DEditFieldLabel_2`,
@@ -350,5 +466,5 @@ microscope yet.
   orientation. This affects the log only, not the images.
 - Paint Mode allocates a very large canvas (about 14.8 GB), and `imshow` is called
   without `Parent`.
-- Others are listed in `docs/V5_app_guide.md`, section 6: Reset does not clear the
-  save folder, cancelling `uigetdir` is not handled, and there is no camera timeout.
+- Others are listed in `docs/V5_app_guide.md`, section 6. (Reset save folder, camera
+  timeout and cancelling `uigetdir` were fixed on 2026-11-04.)
