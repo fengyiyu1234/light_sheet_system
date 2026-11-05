@@ -6,6 +6,34 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-05: Tenengrad autofocus waits for the lens after its last move (bug 4)
+
+Request: fix "Tenengrad autofocus has no wait after its final lens move".
+
+- `dynamic_focus`, Tenengrad branch: after each of the three `1PA` moves at the end (final
+  move to the fitted peak; move back when the peak is at the edge of the scan; move back in
+  the `catch`) it now calls `readLensPos(app.controlParameters.sDetLens)`, which waits until
+  two position reads in a row agree (motor stopped; 10 s timeout with a warning). Chosen
+  instead of a fixed `pause`, because the move back from the edge of the scan can be up to
+  120 um (about 0.6 s at `1VA0.2`). The scan loop (`pause(0.15)` per 5 um step) and the
+  Entropy branch are unchanged.
+- `dynamic_focus` is also called in the 640 nm Analog imaging, so that mode now waits the same
+  way after autofocus; no line of `startimagealltilesButtonPushed` was changed.
+- Small side effect: if `readLensPos` fails (unreadable motor reply, `getpos` error) after the
+  final move, the `catch` moves the lens back to the offset, as for any other error there.
+- Edited by script (`appModel.mat` editable section + `document.xml`, each text found once);
+  re-zipped with .NET in the original entry order (MATLAB R2026b on the workstation has no Java).
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_tenengrad_wait.mlapp`;
+  `_archive/docs/*_before_tenengrad_wait.md`.
+- Checks: editable section, startup and all 70 callbacks of `appModel.mat` appear verbatim in
+  `document.xml`; the unzipped new `.mlapp` matches the edited files byte for byte; checkcode
+  365 -> 365; `minimumSupportedMATLABRelease` R2018a.
+- **Not tested on the microscope.** To check there: after a Tenengrad autofocus during imaging,
+  the command window shows "Autofocus complete. Moved to: ..." and imaging goes on without a
+  `readLensPos:notSettled` warning; the first slices of the tile are not blurred.
+
+---
+
 ## 2026-11-05: microscope test of skip tile (commit cc5a716): data checked, no problems
 
 Request: Fengyi ran a test on the microscope with the code before the UI change; check the data
@@ -602,7 +630,7 @@ microscope yet.
   640 nm laser goes back to 1 mW.
 - `RollScanButtonValueChanged` writes to `controlParameters.afg` without `app.`, so
   Roll Scan errors out.
-- Tenengrad autofocus does not pause after its final lens move.
+- (fixed 2026-11-05) Tenengrad autofocus does not pause after its final lens move.
 - The `catch` block of `startimagealltilesButtonPushed` checks
   `exist('app.waitbar','var')`, which is always false, so the progress window stays
   open after an error.

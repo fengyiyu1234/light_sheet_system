@@ -111,6 +111,7 @@ current position. The two methods:
   otherwise it returns to the offset.
 - **Tenengrad (default)**: scan ±60 µm in 5 µm steps on a 4x-downsampled image, refine the peak
   with a parabolic fit, and return to the offset if the peak is at the edge of the range.
+  After the final move (or the move back) it waits with `readLensPos` until the lens has stopped.
 
 `DCTS` / `abslog2` / `calculate_sharpness` are helper metrics; `DCTS` is not used.
 
@@ -134,7 +135,6 @@ microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
 
 | # | Priority | Where | Problem | Effect |
 |---|---|---|---|---|
-| 4 | Med | `dynamic_focus`, Tenengrad branch | the final `1PA` move (and the revert moves) are not followed by a wait; only the Entropy branch pauses | The first images after a Tenengrad autofocus can be taken while the detection lens is still moving |
 | 6 | Med | `startimagealltilesButtonPushed`, outer `catch` | `exist('app.waitbar','var')` and `exist('app.wait_status','var')` are always false | After an imaging error the progress window stays open |
 | 7 | Med | `RollScanButtonValueChanged` | `fwrite(controlParameters.afg, …)` is missing `app.` | Turning Roll Scan on errors before `output2 on` |
 | 8 | Med | `PaintButtonValueChanged` | `zeros(2048*21, 2048*21)` (double, about 14.8 GB); `imshow` without `Parent` | Paint can run out of memory; the image can be drawn into the wrong figure |
@@ -151,6 +151,7 @@ microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
 | `StopAnalogButtonPushed`, `SvAFG2ButtonPushed` | `ChangePowerObis` arguments in the wrong order; 640 nm went to 1 mW | Fixed 2026-11-04 (not tested on the microscope) |
 | `ResetImagingButtonPushed` | kept the old `app.dirname`, so the next run saved into the old folder | Fixed 2026-11-04 (not tested on the microscope) |
 | camera frame-wait loops (`requestoneimagefromcamera`, Paint, Up/Down/Left/Right, Center) | no timeout; app hung if the camera sent no frame | Fixed 2026-11-04: `checkCameraTimeout` (not tested on the microscope) |
+| `dynamic_focus`, Tenengrad branch (was open bug 4) | the final `1PA` move and the two revert moves had no wait, so the first images could be taken while the lens was moving | Fixed 2026-11-05: `readLensPos` after each of the three moves (not tested on the microscope) |
 | `dynamic_focus` (Entropy) | extra `1TP?` left a stale reply in the serial buffer; lens position reads lagged | Fixed 2026-11-03 (query removed; `readLensPos.m` added) |
 | `selfmade/getpos.m` | scientific-notation replies parsed wrongly | Fixed 2026-11-03 |
 | `createscanpatterncenterButtonPushed` | kept tile data from the previous pattern | Fixed 2026-11-03 |
