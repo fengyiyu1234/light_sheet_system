@@ -43,7 +43,7 @@ write is `outputSingleScan(s1, [shutter, galvoX, galvoY, galvoZ])`.
 | Wavelength dropdown | `LightwavelightValueChanged` | Turns on one laser and the others off, sets power, then applies that color's row of `UITable_offset` to the galvos and both lens motors |
 | Laser Power | `LaserPowerValueChanged` | Sets the power of **all** lasers (clamped to 0–30 mW) |
 | Shutter | `ShutterButtonValueChanged` | Opens/closes the shutter using the current color's galvo offset |
-| galvo_X / galvo_Y sliders, Reset | `galvo_*SliderValueChanged`, `Reset_galvo_XYButtonPushed` | Writes galvo voltages directly |
+| galvo_X / galvo_Y sliders, Reset | `galvo_*SliderValueChanged`, `Reset_galvo_XYButtonPushed` | Writes galvo voltages directly. Since 2026-11-04 each slider also has ◀/▶ buttons and a step dropdown (0.1–0.001 V, default 0.01), created in `applyLayout`; they call `galvoStep(app, axis, delta)`, which moves the slider (clamped to its Limits) and runs the slider callback |
 | Filter wheel | `FilterwheelValueChanged` | `pos=1..6` |
 | Enable / Disable Camera | `EnableCamButtonPushed`, `DisableCamButtonPushed` | Live View: a blocking `while` loop in `EnableCam` that runs until `myhandles.continue = false` |
 | Live View tools | `ShowGridCheckBoxValueChanged`, `SnapHistogramButtonPushed`, `ImagecontrastValueChanged`, `Exposure_timeEditFieldValueChanged` | Tools that work while Live View is open. **Show Grid** shows a centre crosshair (since 2026-11-04 directly on the main window; the "Live View Buttons" panel and Run AutoFocus were removed) |
@@ -57,6 +57,8 @@ write is `outputSingleScan(s1, [shutter, galvoX, galvoY, galvoZ])`.
 | Paint tile grid (2026-11-04) | `drawPaintTileGrid`, `selfmade/paintTileGrid.m` | In the Paint view, orange boxes show the Vertical x Horizontal tiles that create scan pattern would make at the current position (15 % overlap, numbered); redrawn after every Paint move and when the tile fields change |
 | export tiles / import tiles (2026-11-04) | `exportTiles`, `importTiles` (bound to `exporttilesButton` / `importtilesButton` in `startupFcn`), `selfmade/writeTileList.m`, `readTileList.m` | xlsx with sheets `Tiles` (one row per tile: saved, skip, start/end, stage X/Y/Z, path, planned X/Y/Z) and `Grid`; importing makes it the current scan pattern. `imaging_params_*.xlsx` also gets these sheets |
 | command-window log (2026-11-04) | `startLog`, `selfmade/flushDiary.m` | `diary` to `<repo>\logs\` at start-up, moved to `<output folder>\matlab_log_<date>.txt` when the saving directory is chosen; written to disk every 30 s and after every tile |
+| Window layout (2026-11-04) | `selfmade/applyLayout.m`, called in `startupFcn` | At start-up, moves the components into 5 panels by workflow (top bar, 1 channel tuning, 2 stage + Paint, 3 z per tile, 4 acquisition), window 960 x 960 on the left half of the screen; Live View and Paint open on the right half (`[965 45 945 945]`). Roll slider / Roll Scan are hidden, the Galvo_Z table columns are hidden (data still used). Design View still shows the old layout; components not placed by `applyLayout` are listed in the command window. Remove the `applyLayout(app)` line to go back |
+| Tile States box | `updateTileStatus` | Line 1: current tile and "save all checkpoints? Yes/No" (the imaging button checks the "s" at the end); line 2: min start / max end; line 3: saved count and tiles not saved; then every tile, two per line (`start -- end`, `skip` or `---`), fixed-width font |
 
 Keyboard shortcuts (`UIFigureKeyPress`):
 - `a`/`d`: previous/next tile

@@ -6,6 +6,130 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-05: microscope test of skip tile (commit cc5a716): data checked, no problems
+
+Request: Fengyi ran a test on the microscope with the code before the UI change; check the data
+in `W:\Fengyi\test_tscff6` for problems.
+
+- Code version: the run started 2026-11-04 15:47, so it used commit `cc5a716` (skip button
+  added). That version has no tile export/import or log file, so the missing `Tiles`/`Grid`
+  sheets and `matlab_log_*.txt` are expected. **`bb6395f` (export/import tiles, Paint grid,
+  log) and the new layout (`applyLayout`) are still not tested on the microscope.**
+- Run: 2 x 2 tiles, 488 / 561 / 640 Analog (power5 and power15) / 730, z step 20 um, one tile
+  skipped (`9_Skipped_Grid`); 72 min (4306 s).
+- Checked (MATLAB script, all 4420 images): every tile folder has 221 images,
+  2048x2048 uint16, z 272000-316000 in steps of 200; blank frames are all zero and are
+  exactly where the xlsx start/end say (196 slices -> 10 at the start + 15 at the end; 216 ->
+  5 at the end; 221 -> none; skipped tile -> all 221 blank, written in about 1 min with no
+  imaging, then the run went on to the next tile). No two consecutive identical frames
+  (centre 256x256), so no repeated camera frames. 640 Analog: both power folders complete
+  and written together; median brightness ratio about 2.6-2.7 for power 15/5.
+- Not a code problem: some 561 / 640 / 730 frames have saturated pixels (65535) in the
+  centre region. `Total Duration String` is read back by Excel as a time (0.0498 day).
+- Bug 9 (xlsx grid orientation) cannot be judged from a 2 x 2 grid; the grid values do match
+  the images tile by tile. Check with a non-square grid (e.g. 2 x 3).
+- Result: skip tile (fill blank) and the multi-tile run of `cc5a716` **tested on the
+  microscope, OK**.
+- Backup: `_archive/docs/PROGRESS_LOG_before_skip_test_record.md`. No code changed.
+
+---
+
+## 2026-11-04: new window layout (applyLayout), galvo ◀/▶ + step, larger Tile States
+
+Request: implement the UI plan with method A (automatic layout at startup). The window should
+take half of the 24" screen (to watch the camera while adjusting); Live View / Paint stay
+separate windows but open on the right half; galvo X/Y keep the sliders plus ◀/▶ and a step
+dropdown (default 0.01 V); Roll is not used (hide); Galvo_Z is not needed; Tile States should be
+bigger (40-50 tiles), with the rest scrolling.
+
+- New `MMcodeOrcaV2/selfmade/applyLayout.m` (ASCII only, for R2019a): sets the window to
+  `[1 41 960 960]`, creates 5 panels (top bar, 1 channel tuning, 2 stage + Paint, 3 z per tile,
+  4 acquisition) and moves the existing components into them (`Parent`/`Position`, plus a few
+  display properties: slider ticks, table font size and column widths, three step labels
+  shortened to Up/Down, Left/Right, In/Out, one Power/Exposure label per row, green bold
+  start button, Courier New in Tile States). Creates the galvo ◀/▶ buttons and step dropdowns
+  (0.1/0.05/0.01/0.005/0.001 V). Hides `RollSlider`(+Label), `RollScanButton`, the two
+  emptied panels, and the Galvo_Z columns (`ColumnWidth` 0; the data is still sent to the
+  DAQ). Prints any component it did not place.
+- `.mlapp` (both `document.xml` and `appModel.mat`):
+  - `startupFcn`: `applyLayout(app)` after the export/import bindings.
+  - New public method `galvoStep(app, axisName, delta)`: moves the slider by delta (rounded to
+    1e-4, clamped to `Limits`), then calls `galvo_X/YSliderValueChanged`.
+  - `updateTileStatus`: line 3 is now "Saved n/N, not saved: ..."; then every tile, two per
+    line (`start -- end`, `skip`, or `---` if not saved). Line 1 is unchanged (the imaging
+    button checks its last letter).
+  - `EnableCamButtonPushed` / `PaintButtonValueChanged`: figure position
+    `[100 100 800 800]` / `[100 100 1024 1024]` -> `[965 45 945 945]`.
+  - No change to `startimagealltilesButtonPushed` or other 640 nm Analog code.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_applyLayout.mlapp`;
+  `_archive/docs/*_before_applyLayout.md`.
+- Checks: fake window built from `createComponents` in R2026a on the workstation and
+  screenshotted (all components placed, nothing overlapping). Every block of `appModel.mat`
+  (70 callbacks, startup, editable section) appears verbatim in `document.xml`; only
+  `EnableCamButtonPushed`, `PaintButtonValueChanged`, `startupFcn` and the editable section
+  changed; `startimagealltilesButtonPushed` is identical. Class loads (`meta.class`),
+  `galvoStep` is public. checkcode 366 -> 365 (only line-number shifts in 3 ALIGN notices);
+  `applyLayout.m` 0 messages; `minimumSupportedMATLABRelease` R2018a.
+- Not checked: R2019a behaviour of `ColumnWidth` 0 and of reparenting into new panels;
+  appearance with Windows display scaling other than 100 %.
+- **Not tested on the microscope.** To check there: window fits the left half; galvo ◀/▶
+  move the galvo and update the path table; the keyboard shortcuts (k/l/space...) still work
+  when the focus is in a panel; Tile States with many tiles; Live View / Paint open on the right.
+
+---
+
+## 2026-11-04: UI plan: method A chosen, Roll hidden, Live View / Paint window position (plan only)
+
+Answers from Fengyi: (1) method A (automatic layout at startup); (2) default galvo step 0.01 V;
+(3) Roll is not used, can be hidden; (4) asked whether Live View / Paint would be separate or
+embedded, and how Paint would handle samples of different size.
+
+- `docs/UI_redesign_plan.md`: method A marked as chosen; `RollSlider`(+Label) and `RollScanButton`
+  go to a "hidden" row (callbacks unchanged); new section 6.1: Live View (`[100 100 800 800]`)
+  and Paint (`[100 100 1024 1024]`, taller than a 1080 screen) are separate `figure` windows
+  that open over the control window. Proposal: keep them separate, only change the initial
+  position to the right half of the screen; they stay movable/resizable, and Paint scales the
+  stitched image to the window (`imshow`), so sample size is not limited by the window.
+- Backup: `_archive/docs/UI_redesign_plan_before_answers_1_3.md`,
+  `_archive/docs/PROGRESS_LOG_before_answers_1_3.md`.
+- No code changed; nothing to test on the microscope.
+
+---
+
+## 2026-11-04: UI plan: galvo X/Y keep the sliders, add ◀/▶ + step dropdown (plan only)
+
+Request: keep the galvo X/Y sliders, add left/right buttons next to them, with an adjustable step
+size chosen from a dropdown.
+
+- `docs/UI_redesign_plan.md` section 3.1 rewritten: sliders stay visible; ◀/▶ add/subtract the
+  step (clamped to the slider `Limits`), write `galvo_X/YSlider.Value` and call the existing
+  `galvo_X/YSliderValueChanged`; one step dropdown each for X and Y (0.1 / 0.05 / 0.01 / 0.005 /
+  0.001 V, default 0.01, to be confirmed). The planned value field and `syncGalvoFields` are
+  dropped; `UITable_path` stays visible to show the exact value. Open questions renumbered.
+- Backup: `_archive/docs/UI_redesign_plan_before_keep_slider.md`,
+  `_archive/docs/PROGRESS_LOG_before_keep_slider.md`.
+- No code changed; nothing to test on the microscope.
+
+---
+
+## 2026-11-04: UI plan updated: galvo X/Y step buttons, Galvo_Z hidden (plan only)
+
+Request: the screen is an ordinary 24" monitor; Galvo_Z is not needed; galvo X/Y sliders are hard
+to set precisely and take space, use arrow buttons + step size like the lenses instead.
+
+- `docs/UI_redesign_plan.md`: new sections 3.1 (galvo X/Y as value field + ◀/▶ + step dropdown;
+  sliders kept but hidden, because several callbacks read/write their `.Value`; new buttons write
+  the slider value and call the existing `galvo_X/YSliderValueChanged`, plus a `syncGalvoFields`
+  helper) and 3.2 (Galvo_Z column hidden in the tables only; its data is still sent to the DAQ by
+  every `outputSingleScan`, so it cannot be deleted). Screen size noted; open questions updated.
+- Found: `save_checkpointButtonPushed` references nonexistent `galvo_ZSlider` / `galvo_Xview`;
+  it is not bound to any control (dead code).
+- Backup: `_archive/docs/UI_redesign_plan_before_galvo_steps.md`,
+  `_archive/docs/PROGRESS_LOG_before_galvo_steps_plan.md`.
+- No code changed; nothing to test on the microscope.
+
+---
+
 ## 2026-11-04: colleague's test controls removed; export/import tiles buttons bound
 
 Request: remove the controls Fengyi does not use (all except Show Grid); keep the 640 nm Analog
@@ -34,6 +158,23 @@ mode (two light intensities for the 640 nm channel, for poor antibody penetratio
   unchanged, and no other callback changed; checkcode 378 -> 365, no new messages (3 ALIGN notices
   moved); `minimumSupportedMATLABRelease` R2018a.
 - **Not tested on the microscope.**
+
+---
+
+## 2026-11-04: UI redesign plan (plan only, no code changed)
+
+Request: redesign the UI to follow the workflow (tune galvo/detection per channel -> Paint for
+the xy bounds -> z bounds tile by tile -> acquire); the controls left on the UI are the ones in use.
+
+- New `docs/UI_redesign_plan.md`: layout mockup (top bar + 4 numbered sections), which component
+  goes to which section, three ways to implement it (recommended: `selfmade/applyLayout.m`
+  called from `startupFcn`, which moves the existing components into new panels at run time),
+  and open questions (method, screen resolution of the microscope PC, layout changes).
+  Written in Chinese, so the discussion can continue on another PC.
+- Noted: `SaveImAFG2Button`, `SaveImCamButton`, `TestTriggerButton` were removed from the UI,
+  but their callbacks still reference them (dead code).
+- Backup: `_archive/docs/PROGRESS_LOG_before_ui_plan.md`.
+- No code changed; nothing to test on the microscope.
 
 ---
 
@@ -437,6 +578,9 @@ microscope yet.
 - [ ] Make the first git commit and push to `github.com/fengyiyu1234/light_sheet_system` (private).
 - [ ] Copy the updated files to the microscope PC and test: start-up, Live View, autofocus
       (both methods), create scan pattern, and a short multi-tile run.
+      (2026-11-05: multi-tile run with skip tile OK on commit `cc5a716`. Still to test:
+      `bb6395f` export/import tiles, Paint grid, log file; the `applyLayout` window;
+      bug 9 with a non-square grid.)
 - [x] Update the known-bugs table in `docs/V5_app_guide.md` (done 2026-11-04).
 - [ ] Check on the microscope whether pressing Up changes the exposure to 40 ms (only
       `UpButtonPushed` sets it), and decide whether to keep that line.
