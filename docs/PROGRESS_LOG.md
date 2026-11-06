@@ -6,6 +6,22 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-05: Show Grid and AFG scan swap places
+
+Request: swap the positions of the "Show Grid" check box and the "AFG scan" button in the UI.
+
+- `selfmade/applyLayout.m` only (the layout is set at startup, the `.mlapp` is unchanged):
+  `AFG_scanButton` now in the top bar at `[325 8 85 22]` (where Show Grid was);
+  `ShowGridCheckBox` now in panel 1 next to "Reset galvo XY" at `[126 T-121 85 22]`.
+  Callbacks unchanged.
+- Backup: `_archive/MMcodeOrcaV2/selfmade/applyLayout_before_swap_grid_afg.m`,
+  `_archive/docs/PROGRESS_LOG_before_swap_grid_afg.md`.
+- Checks: checkcode R2026b 0 messages; file still ASCII.
+- **Not tested on the microscope.** To check there: the two controls appear in the swapped
+  places, the text is not cut off, and both still work.
+
+---
+
 ## 2026-11-05: path and motor tables merged into one 1x4 table
 
 Request: the path table (Path / Galvo_X / Galvo_Y) and the lens table (Lens / Position(mm))

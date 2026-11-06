@@ -55,7 +55,7 @@ put(app.Exposure_timeEditFieldLabel, pTop, [8 8 86 22]);
 put(app.Exposure_timeEditField, pTop, [96 8 55 22]);
 put(app.ImagecontrastLabel,     pTop, [165 8 85 22]);
 put(app.Imagecontrast,          pTop, [252 8 55 22]);
-put(app.ShowGridCheckBox,       pTop, [325 8 85 22]);
+put(app.AFG_scanButton,         pTop, [325 8 85 22]);   % (2026-11-05) swapped with Show Grid
 put(app.SaveImage,              pTop, [420 8 130 22]);
 put(app.AutoFocusDropDownLabel, pTop, [570 8 66 22]);
 put(app.AutoFocusDropDown,      pTop, [640 8 130 22]);
@@ -83,7 +83,7 @@ uibutton(p1, 'Text', char(9654), 'Position', [217 T-82 30 24], ...
     'ButtonPushedFcn', @(src, event) galvoStep(app, 'Y',  str2double(ddY.Value)));
 
 put(app.Reset_galvo_XYButton, p1, [6 T-122 110 24]);
-put(app.AFG_scanButton,       p1, [122 T-122 90 24]);
+put(app.ShowGridCheckBox,     p1, [126 T-121 85 22]);   % (2026-11-05) swapped with AFG scan
 
 lens = app.ExcitationLensandDetectionLensPanel;
 put(lens, p1, [6 T-222 300 90]);
