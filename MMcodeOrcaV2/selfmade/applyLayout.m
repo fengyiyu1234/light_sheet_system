@@ -4,11 +4,12 @@ function applyLayout(app)
 %   (2026-11-04) The Design View layout is not changed. At startup this function
 %   creates 5 panels and moves the existing components into them (only Parent,
 %   Position and a few display properties change; callbacks are untouched):
-%     top bar : light path, wavelength, power, filter, shutter, camera, exposure, ...
+%     top bar : image saving directory (top row); Enable/Disable Camera large in the
+%               centre; light path, wavelength, shutter, exposure, ... left; power, filter, ... right
 %     1 Channel tuning : galvo X/Y (slider + left/right + step), lenses, path/motor/offset tables
 %     2 Stage + Paint (XY) : stage arrows and steps, stage position, Paint, tile grid
 %     3 Z per tile : move to tile, start/end, save checkpoints, Tile States
-%     4 Acquisition : colors, power/exposure, z step, 640 nm tools, directory, start
+%     4 Acquisition : colors, power/exposure, z step, 640 nm tools, start
 %   The window is half of a 1920 x 1080 screen (left half); Live View and Paint
 %   open on the right half (set in EnableCamButtonPushed / PaintButtonValueChanged).
 %   To go back to the Design View layout, remove the applyLayout(app) line in startupFcn.
@@ -27,38 +28,53 @@ col2   = [0.88 0.93 1.00];          % 2 stage + paint: blue
 col3   = [1.00 0.97 0.85];          % 3 z per tile: yellow
 col4   = [1.00 1.00 1.00];          % 4 acquisition: white
 
-pTop = uipanel(fig, 'Position', [5 880 950 75], 'BackgroundColor', colTop);
+% (2026-11-06) top bar 32 px taller (image saving directory moved up from panel 4),
+% panels 1-3 moved down 32 px, panel 4 32 px lower (its directory row is gone)
+pTop = uipanel(fig, 'Position', [5 848 950 107], 'BackgroundColor', colTop);
 p1 = uipanel(fig, 'Title', '1. Channel tuning (galvo, lenses, offsets)', ...
-    'Position', [5 245 313 630], 'BackgroundColor', col1, 'FontWeight', 'bold');
+    'Position', [5 213 313 630], 'BackgroundColor', col1, 'FontWeight', 'bold');
 p2 = uipanel(fig, 'Title', '2. Stage + Paint (XY bounds)', ...
-    'Position', [323 245 313 630], 'BackgroundColor', col2, 'FontWeight', 'bold');
+    'Position', [323 213 313 630], 'BackgroundColor', col2, 'FontWeight', 'bold');
 p3 = uipanel(fig, 'Title', '3. Z bounds per tile', ...
-    'Position', [641 245 314 630], 'BackgroundColor', col3, 'FontWeight', 'bold');
+    'Position', [641 213 314 630], 'BackgroundColor', col3, 'FontWeight', 'bold');
 p4 = uipanel(fig, 'Title', '4. Acquisition', ...
-    'Position', [5 5 950 235], 'BackgroundColor', col4, 'FontWeight', 'bold');
+    'Position', [5 5 950 203], 'BackgroundColor', col4, 'FontWeight', 'bold');
 T  = 605;                            % top of the usable area inside p1..p3 (630 minus the title)
-T4 = 210;                            % same for p4
+T4 = 178;                            % same for p4
 
 %% top bar
-put(app.LightPathDropDownLabel, pTop, [8 40 60 22]);
-put(app.LightPathDropDown,      pTop, [70 40 70 22]);
-put(app.WavelengthLabel,        pTop, [150 34 160 34]);   % coloured by wavelength; the dropdown sits on it
-put(app.Lightwavelight,         pTop, [225 40 80 22]);
-put(app.LaserPowermWEditFieldLabel, pTop, [320 40 100 22]);
-put(app.LaserPower,             pTop, [422 40 40 22]);
-put(app.FilterwheelDropDownLabel, pTop, [475 40 67 22]);
-put(app.Filterwheel,            pTop, [544 40 110 22]);
-put(app.ShutterButton,          pTop, [665 40 70 22]);
-put(app.EnableCam,              pTop, [745 40 95 22]);
-put(app.DisableCam,             pTop, [845 40 97 22]);
-put(app.Exposure_timeEditFieldLabel, pTop, [8 8 86 22]);
-put(app.Exposure_timeEditField, pTop, [96 8 55 22]);
-put(app.ImagecontrastLabel,     pTop, [165 8 85 22]);
-put(app.Imagecontrast,          pTop, [252 8 55 22]);
-put(app.AFG_scanButton,         pTop, [325 8 85 22]);   % (2026-11-05) swapped with Show Grid
-put(app.SaveImage,              pTop, [420 8 130 22]);
-put(app.AutoFocusDropDownLabel, pTop, [570 8 66 22]);
-put(app.AutoFocusDropDown,      pTop, [640 8 130 22]);
+% row 1 (top): image saving directory
+put(app.ImagesavingdirectoryButton, pTop, [8 78 140 24]);
+put(app.pathEditField,              pTop, [154 78 690 24]);
+put(app.OpenPathButton,             pTop, [850 78 90 24]);
+% centre of rows 2-3: Enable / Disable Camera, large (used very often)
+put(app.EnableCam,              pTop, [380 10 103 58]);
+put(app.DisableCam,             pTop, [487 10 103 58]);
+app.EnableCam.FontSize = 12;
+app.EnableCam.FontWeight = 'bold';
+app.DisableCam.FontSize = 12;
+app.DisableCam.FontWeight = 'bold';
+% left part, row 2
+put(app.LightPathDropDownLabel, pTop, [8 44 60 22]);
+put(app.LightPathDropDown,      pTop, [70 44 70 22]);
+put(app.WavelengthLabel,        pTop, [148 38 160 34]);   % coloured by wavelength; the dropdown sits on it
+put(app.Lightwavelight,         pTop, [223 44 80 22]);
+put(app.ShutterButton,          pTop, [310 44 64 22]);
+% left part, row 3
+put(app.Exposure_timeEditFieldLabel, pTop, [8 10 86 22]);
+put(app.Exposure_timeEditField, pTop, [96 10 55 22]);
+put(app.ImagecontrastLabel,     pTop, [157 10 85 22]);
+put(app.Imagecontrast,          pTop, [244 10 55 22]);
+put(app.AFG_scanButton,         pTop, [306 10 68 22]);   % (2026-11-05) swapped with Show Grid
+% right part, row 2
+put(app.LaserPowermWEditFieldLabel, pTop, [596 44 98 22]);
+put(app.LaserPower,             pTop, [696 44 42 22]);
+put(app.FilterwheelDropDownLabel, pTop, [745 44 67 22]);
+put(app.Filterwheel,            pTop, [814 44 124 22]);
+% right part, row 3
+put(app.SaveImage,              pTop, [596 10 124 22]);
+put(app.AutoFocusDropDownLabel, pTop, [722 10 66 22]);
+put(app.AutoFocusDropDown,      pTop, [790 10 148 22]);
 
 %% 1 channel tuning
 stepItems = {'0.1', '0.05', '0.01', '0.005', '0.001'};   % galvo step (V) for the left/right buttons
@@ -215,12 +231,10 @@ put(app.Mode640nmDropDownLabel,  p4, [672 T4-24 72 22]);
 put(app.Mode640nmDropDown,       p4, [748 T4-24 74 22]);
 put(app.StopAnalogButton,        p4, [828 T4-24 85 22]);
 put(app.ListofLaserPowerstogenerateHDRimageMin1Max20Label, p4, [588 T4-46 355 20]);
-put(app.HDPRTable,               p4, [588 70 355 92]);
+put(app.HDPRTable,               p4, [588 38 355 92]);
 app.HDPRTable.ColumnWidth = {68, 68, 68, 68};
 
-put(app.ImagesavingdirectoryButton, p4, [6 38 140 24]);
-put(app.pathEditField,              p4, [152 38 690 24]);
-put(app.OpenPathButton,             p4, [848 38 90 24]);
+% (2026-11-06) the image saving directory row moved to the top row of the top bar
 put(app.ResetImagingButton,         p4, [6 4 110 28]);
 put(app.startimagealltilesButton,   p4, [700 3 238 32]);
 app.startimagealltilesButton.FontSize = 14;

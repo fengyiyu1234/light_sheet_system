@@ -6,6 +6,85 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-06: shutter stays open after Disable Camera and Paint off
+
+Request: the shutter is hardly ever closed while using the UI, so Disable Camera should leave it
+open; Paint may also leave it open; the shutter handling during imaging must not change.
+
+- `.mlapp` (`appModel.mat` + `document.xml`):
+  - `DisableCamButtonPushed`: the shutter-close block (`Shutterstate1 = 0`, `outputSingleScan`,
+    `ShutterButton.Value = 0`) removed; it now only stops the live loop, closes the window and
+    stops the camera. Lasers and shutter are left as they are.
+  - `PaintButtonValueChanged`: Paint on sets `app.Shutterstate1 = 4` and `ShutterButton.Value = 1`
+    and sends that (before: literal `4`, state not updated); Paint off no longer sends `0`
+    (shutter stays open). Fixes the Paint part of bug 13.
+  - `startimagealltilesButtonPushed` unchanged (640 nm Analog untouched).
+- Edited by MATLAB script (whole old callback text found once in `document.xml`); re-zipped with
+  .NET in the original entry order.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_shutter_open.mlapp`,
+  `_archive/docs/PROGRESS_LOG_before_shutter_open.md`, `_archive/docs/V5_app_guide_before_shutter_open.md`.
+- Checks: 72/72 blocks of `appModel.mat` verbatim in `document.xml`; unzipped `.mlapp` matches the
+  edited files; checkcode R2026b and R2019a: no new message (only ALIGN line shifts);
+  `minimumSupportedMATLABRelease` R2018a.
+- **Not tested on the microscope.** To check there: after Disable Camera and after Paint off the
+  shutter is still open and the laser on; the Shutter button shows pressed after Enable / Paint on.
+
+---
+
+## 2026-11-06: where the shutter opens/closes (question only); bug 13 found
+
+Question from Fengyi: is the shutter always open except for the Shutter button? Does wavelength
+"None" close it?
+
+- Read the code: shutter = DAQ `Board0/Ao1`, 4 V open / 0 V closed, sent as the first value of
+  every `outputSingleScan` on `s1`; state in `app.Shutterstate1` (0 at startup).
+  Opens: Shutter button, Enable Camera, Light Path = path1, Paint on, imaging (per channel).
+  Closes: Shutter button, Disable Camera, Paint off, imaging (between channels, at the end, on error).
+  Wavelength (incl. "None"), galvo sliders/buttons, Reset galvo and the path table only resend
+  the current `app.Shutterstate1`; "None" switches the lasers off but does not touch the shutter.
+- Found bug 13 (added to `V5_app_guide.md` 6.1): Paint and imaging set the shutter directly
+  without updating `app.Shutterstate1`, so a later galvo move / wavelength change can reopen it.
+- Backup: `_archive/docs/*_before_cam_top.md` (taken before the previous entry; only this entry
+  and one table row added since). No code changed; nothing to test on the microscope.
+
+---
+
+## 2026-11-06: saving directory at the top, Enable/Disable Camera large in the centre; Disable Camera leaves lasers on
+
+Request: put the data output path setting at the very top; put Enable/Disable Camera at the top,
+near the centre (used very often); Disable Camera switched the lasers off, which is inconvenient:
+decouple the two.
+
+- `selfmade/applyLayout.m`: top bar 75 -> 107 px high. Row 1: "Image saving directory" +
+  path field + "Open Path" (moved from panel 4). Rows 2-3: Enable / Disable Camera as two
+  large buttons (103 x 58, bold 12 pt) in the centre (x 380-590); left of them light path,
+  wavelength, Shutter / exposure, contrast, AFG_scan; right of them laser power, filter wheel /
+  Save Image, AutoFocus. Panels 1-3 moved down 32 px (contents unchanged); panel 4 32 px lower
+  (`T4` 210 -> 178), HDR table moved down into the freed row.
+- `.mlapp` (`appModel.mat` + `document.xml`):
+  - `DisableCamButtonPushed`: the loop that switched all 4 lasers off is removed. It still stops
+    the live loop, closes the window, stops the camera and closes the shutter (so no light on
+    the sample). Lasers are switched off with wavelength "None" (unchanged), and the imaging
+    run still switches them off at the end. New: `ShutterButton.Value = 0`.
+  - `EnableCamButtonPushed` (path 1): new `ShutterButton.Value = 1` after the shutter state is
+    set (the button now shows the real shutter state). Laser switching in Enable unchanged.
+  - No change to `startimagealltilesButtonPushed` or other 640 nm Analog code.
+- Edited by MATLAB script (whole old callback text found once in `document.xml`, replaced in both
+  files); re-zipped with .NET in the original entry order.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_cam_decouple.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/applyLayout_before_cam_top.m`,
+  `_archive/docs/PROGRESS_LOG_before_cam_top.md`, `_archive/docs/V5_app_guide_before_cam_top.md`.
+- Checks: editable section, startup and all 70 callbacks of `appModel.mat` appear verbatim in
+  `document.xml` (72/72 blocks); unzipped new `.mlapp` matches the edited files; checkcode
+  R2026b and R2019a: no new message (only the 3 ALIGN line shifts); `applyLayout.m` 0 messages,
+  still ASCII; `minimumSupportedMATLABRelease` R2018a. Screenshot of a fake window built from
+  `createComponents` + `applyLayout` (R2026b): nothing overlaps, "Disable Camera" not cut off.
+- **Not tested on the microscope.** To check there: layout as described; Disable Camera closes
+  the live window and the shutter but the laser stays on (OBIS LED); Enable Camera again shows
+  an image at once; the Shutter button shows pressed after Enable and released after Disable.
+
+---
+
 ## 2026-11-05: Show Grid and AFG scan swap places
 
 Request: swap the positions of the "Show Grid" check box and the "AFG scan" button in the UI.
