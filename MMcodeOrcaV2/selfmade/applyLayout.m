@@ -5,7 +5,7 @@ function applyLayout(app)
 %   creates 5 panels and moves the existing components into them (only Parent,
 %   Position and a few display properties change; callbacks are untouched):
 %     top bar : image saving directory (top row); Enable/Disable Camera large in the
-%               centre; light path, wavelength, shutter, exposure, ... left; power, filter, ... right
+%               centre; wavelength, power, filter, exposure, ... left; light path, shutter, ... right
 %     1 Channel tuning : galvo X/Y (slider + left/right + step), lenses, path/motor/offset tables
 %     2 Stage + Paint (XY) : stage arrows and steps, stage position, Paint, tile grid
 %     3 Z per tile : move to tile, start/end, save checkpoints, Tile States
@@ -48,33 +48,37 @@ put(app.ImagesavingdirectoryButton, pTop, [8 78 140 24]);
 put(app.pathEditField,              pTop, [154 78 690 24]);
 put(app.OpenPathButton,             pTop, [850 78 90 24]);
 % centre of rows 2-3: Enable / Disable Camera, large (used very often)
-put(app.EnableCam,              pTop, [380 10 103 58]);
-put(app.DisableCam,             pTop, [487 10 103 58]);
+% (2026-11-07) moved 20 px right to give the left part (used most) more room
+put(app.EnableCam,              pTop, [400 10 103 58]);
+put(app.DisableCam,             pTop, [507 10 103 58]);
 app.EnableCam.FontSize = 12;
 app.EnableCam.FontWeight = 'bold';
 app.DisableCam.FontSize = 12;
 app.DisableCam.FontWeight = 'bold';
-% left part, row 2
-put(app.LightPathDropDownLabel, pTop, [8 44 60 22]);
-put(app.LightPathDropDown,      pTop, [70 44 70 22]);
-put(app.WavelengthLabel,        pTop, [148 38 160 34]);   % coloured by wavelength; the dropdown sits on it
-put(app.Lightwavelight,         pTop, [223 44 80 22]);
-put(app.ShutterButton,          pTop, [310 44 64 22]);
+% left part, row 2 (2026-11-07): wavelength, laser power, filter wheel (used often);
+% light path and shutter (hardly used) moved to the right part
+put(app.WavelengthLabel,        pTop, [8 38 150 34]);   % coloured by wavelength; the dropdown sits on it
+put(app.Lightwavelight,         pTop, [83 44 72 22]);
+put(app.LaserPowermWEditFieldLabel, pTop, [160 44 64 22]);
+put(app.LaserPower,             pTop, [226 44 40 22]);
+put(app.FilterwheelDropDownLabel, pTop, [270 44 34 22]);
+put(app.Filterwheel,            pTop, [306 44 88 22]);
+app.LaserPowermWEditFieldLabel.Text = 'Power(mW)';
+app.FilterwheelDropDownLabel.Text = 'Filter';
 % left part, row 3
 put(app.Exposure_timeEditFieldLabel, pTop, [8 10 86 22]);
 put(app.Exposure_timeEditField, pTop, [96 10 55 22]);
 put(app.ImagecontrastLabel,     pTop, [157 10 85 22]);
 put(app.Imagecontrast,          pTop, [244 10 55 22]);
 put(app.AFG_scanButton,         pTop, [306 10 68 22]);   % (2026-11-05) swapped with Show Grid
-% right part, row 2
-put(app.LaserPowermWEditFieldLabel, pTop, [596 44 98 22]);
-put(app.LaserPower,             pTop, [696 44 42 22]);
-put(app.FilterwheelDropDownLabel, pTop, [745 44 67 22]);
-put(app.Filterwheel,            pTop, [814 44 124 22]);
+% right part, row 2 (2026-11-07): light path and shutter
+put(app.LightPathDropDownLabel, pTop, [616 44 60 22]);
+put(app.LightPathDropDown,      pTop, [678 44 70 22]);
+put(app.ShutterButton,          pTop, [756 44 64 22]);
 % right part, row 3
-put(app.SaveImage,              pTop, [596 10 124 22]);
-put(app.AutoFocusDropDownLabel, pTop, [722 10 66 22]);
-put(app.AutoFocusDropDown,      pTop, [790 10 148 22]);
+put(app.SaveImage,              pTop, [616 10 120 22]);
+put(app.AutoFocusDropDownLabel, pTop, [738 10 66 22]);
+put(app.AutoFocusDropDown,      pTop, [806 10 132 22]);
 
 %% 1 channel tuning
 stepItems = {'0.1', '0.05', '0.01', '0.005', '0.001'};   % galvo step (V) for the left/right buttons
@@ -120,7 +124,10 @@ app.UITable_path.ColumnWidth = {70, 70, 76, 76};
 app.UITable_motor.Visible = 'off';
 put(app.UITable_offset, p1, [6 T-438 300 145]);
 app.UITable_offset.FontSize = 12;
-app.UITable_offset.ColumnWidth = {48, 54, 54, 0, 64, 64};
+% (2026-11-07) Galvo_Z column removed from the data (startupFcn); the names are fixed in
+% Design View (6 of them), so set the 5 shown ones here (same order as the data)
+app.UITable_offset.ColumnName = {'Offset'; 'Galvo_X'; 'Galvo_Y'; 'Detection'; 'Excitation'};
+app.UITable_offset.ColumnWidth = {48, 54, 54, 60, 60};
 put(app.saveoffsetfordifferentcolorButton, p1, [6 T-471 200 26]);
 
 % Roll is not used: hidden (callbacks unchanged)

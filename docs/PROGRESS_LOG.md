@@ -6,6 +6,48 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-07: top bar reordered; Galvo_Z column removed from the offset table (0 V sent)
+
+Request: Light Path and Shutter are hardly used, move them to the right; Laser Power and Filter
+wheel are used often. Remove the Galvo_Z column of the offset table. Fengyi: Galvo_Z (light-sheet
+roll) has always been 0 (a rotated sheet is no longer parallel to the focal plane), so all
+colors use 0; agreed to write 0 in the imaging code instead of reading the table.
+
+- `selfmade/applyLayout.m`: top bar row 2 left = Wavelength, "Power(mW)", "Filter" (labels
+  shortened); Light Path + Shutter on the right of row 2. Enable/Disable Camera moved 20 px right
+  (x 400-610); Save Image / AutoFocus in row 3 right narrowed slightly. Offset table: `ColumnName`
+  set to `Offset, Galvo_X, Galvo_Y, Detection, Excitation` (Design View has 6 fixed names, which
+  would otherwise be shown over the wrong columns), `ColumnWidth` 5 values.
+- `.mlapp` (`appModel.mat` + `document.xml`):
+  - `startupFcn`: after reading sheet 5, `app.state_offset.Galvo_Z = []` (if present), so
+    `UITable_offset.Data` has 5 columns and `UITable_offsetCellEdit` indices still match
+    `app.state_offset`. `ColumnEditable` = `[false true true true true]`. `states_record.xlsx`
+    is unchanged (still has the column; it is not written back).
+  - `startimagealltilesButtonPushed`: all 13 `app.UITable_offset.Data.Galvo_Z(k)` -> `0`
+    (DAQ roll channel; the values were all 0 in `states_record.xlsx`, so the output is the same).
+    This includes one shared line of the 640 nm block (line ~3147, before the imaging loop) and the
+    error handler; the 640 nm Analog logic itself is not changed (approved by Fengyi, 2026-11-07).
+    The imaging parameter file sheet `1_Offset` now has 5 columns.
+- `appModel.mat` edited with R2019a by loading only `code` and `save -append` (R2019a cannot load
+  the `StylesMetaData` objects in `components`); raw MAT elements compared: `components`,
+  `appData` and the header element byte-identical, only `code` changed. Re-zipped with .NET in
+  the original entry order. R2026b on this PC has no `matlab.exe` (incomplete install).
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_galvoz_topbar.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/applyLayout_before_galvoz_topbar.m`,
+  `_archive/docs/PROGRESS_LOG_before_galvoz_topbar.md`, `_archive/docs/V5_app_guide_before_galvoz_topbar.md`.
+- Checks: 72/72 code blocks verbatim in `document.xml`; no `UITable_offset.Data.Galvo_Z(k)` left;
+  unzipped `.mlapp` matches the edited files; checkcode R2019a 346 -> 346 (only the 3 ALIGN
+  notices moved); `applyLayout.m` 0 messages, ASCII; `minimumSupportedMATLABRelease` R2018a.
+  Screenshot of a fake window (`createComponents` + `applyLayout`, R2019a): top bar does not
+  overlap, labels not cut off; offset table shows 5 correct headers. Filter shows
+  "reject 4..." for the multi-notch item (the dropdown is 88 px wide); the other filters fit.
+  The offset table's horizontal scrollbar was there before this change too.
+- **Not tested on the microscope.** To check there: layout as described; offset table shows 5
+  columns with the right values; editing Galvo_X/Y, Detection, Excitation in the table still
+  works; an imaging run works for every color (incl. 640 nm Serial and Analog).
+
+---
+
 ## 2026-11-06: shutter stays open after Disable Camera and Paint off
 
 Request: the shutter is hardly ever closed while using the UI, so Disable Camera should leave it
