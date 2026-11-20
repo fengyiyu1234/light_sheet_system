@@ -42,6 +42,13 @@ MMcodeOrcaV2/
     getpos.m                          parse Newport "1TP?" reply
     readLensPos.m                     read a lens motor position reliably (flush + wait until stopped)
     createScanpattern.m               build the M x N tile grid
+    tileFocusOf.m                     per-tile detection lens focus of one tile (NaN = default)
+    tileTableData.m                   rows of the tile table in panel 3 (start/end + focus per color)
+    focusSheetRows.m                  sheet 10_Focus of imaging_params_*.xlsx
+    tileFocusOps.m                    depth-segment focus operations of one tile (Focus editor)
+    focusAtDepth.m                    focus used at one depth (segment > tile > default)
+    focusSegments.m                   focus of one tile/color over start..end, as segments
+    focusEditor.m                     Focus editor window (one bar per color, set focus by depth)
 AfgCode/          Tektronix AFG3022 (afg) + Siglent SDG1022X (afg2): connect, DC, ramp
 OBISgeneral/      OBIS laser: init, on/off, set/check power, disconnect
 FilterWheel/      detection filter wheel: init, get/set position

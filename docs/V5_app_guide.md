@@ -47,26 +47,37 @@ write is `outputSingleScan(s1, [shutter, galvoX, galvoY, galvoZ])`.
 | Filter wheel | `FilterwheelValueChanged` | `pos=1..6` |
 | Enable / Disable Camera | `EnableCamButtonPushed`, `DisableCamButtonPushed` | Live View: a blocking `while` loop in `EnableCam` that runs until `myhandles.continue = false`. Enable turns on the laser of the selected wavelength and opens the shutter (and sets the Shutter button). Since 2026-11-06 Disable **only stops the camera**: lasers and shutter stay as they are (lasers off with wavelength "None", shutter with the Shutter button). Since 2026-11-06 the two buttons are large, in the centre of the top bar |
 | Live View tools | `ShowGridCheckBoxValueChanged`, `SnapHistogramButtonPushed`, `ImagecontrastValueChanged`, `Exposure_timeEditFieldValueChanged` | Tools that work while Live View is open. **Show Grid** shows a centre crosshair (since 2026-11-04 directly on the main window; the "Live View Buttons" panel and Run AutoFocus were removed) |
-| Stage arrows ⏫⏬⍟⌾⏪⏩↺↻, step dropdowns, Get Position | `Button*_Pushed`, `*_stepDropDownValueChanged`, `GetPositionButtonPushed` | Relative stage moves. Moves are blocked while the status lamp is green (a scan pattern is active), except depth (Y) moves |
-| Excitation / Detection lens | `left/rightButtonExt/Obj`, `Ext/ObjStepsizeDropDown` | Newport relative moves (`1PR`), then reads the position back with `readLensPos` (discards stale replies, waits until the motor stops) |
-| save offset for different color | `saveoffsetfordifferentcolorButtonPushed` | Reads both lens positions from the motors, then copies the galvo and lens values into the selected color's row of `UITable_offset` (in memory only) |
-| Paint Mode (Paint, Up/Down/Left/Right, Center, Save paint) | `PaintButtonValueChanged`, `Up/Down/Left/RightButtonPushed`, `CenterButtonPushed`, `SavepaintButtonPushed` | Builds a stitched overview on a 21x21-tile canvas (0.65 µm/px) to find the sample and center it |
+| Stage arrows ⏫⏬⍟⌾⏪⏩↺↻, step dropdowns, Get Position | `Button*_Pushed`, `*_stepDropDownValueChanged`, `GetPositionButtonPushed` | Relative stage moves. Moves are blocked while the status lamp is green (a scan pattern is active), except depth (Y) moves. Since 2026-11-09 also with the arrow keys (see keyboard shortcuts below). Since 2026-11-20 (`applyLayout`): ⏫⏬⏪⏩ larger in the middle of panel 2, step drop-downs in the corners (Up/Down step, Left/Right step, Depth step); the depth buttons are labelled **Close to camera** (⍟ `Button_5`, Y − step, limited by Min Z) and **Away from camera** (⌾ `Button_6`, Y + step). With Paint on (and its window open) the four arrow buttons do the Paint moves (`paintMoveInstead`), like the arrow keys |
+| Excitation / Detection lens ◀ ▶ | `left/rightButtonExt/Obj`, `Ext/ObjStepsizeDropDown`, `lensButtonsOn` | Newport relative moves (`1PR`), then reads the position back with `readLensPos` (discards stale replies, waits until the motor stops). ◀ (`leftButton…`) = `+step` (position up), ▶ (`rightButton…`) = `-step` (position down); the arrows are set in `applyLayout` (Design View still says left/right). Since 2026-11-20 both buttons of a lens are disabled during its move; clicks made meanwhile do nothing |
+| save offset for different color | `saveoffsetfordifferentcolorButtonPushed` | Reads both lens positions from the motors, then copies the galvo and lens values into the selected color's row of `UITable_offset` (in memory only). Since 2026-11-20 the offsets are shown and edited in the transposed table `OffsetView` |
+| Paint Mode (Paint, Center, Save paint; Up/Down/Left/Right hidden since 2026-11-20) | `PaintButtonValueChanged`, `Up/Down/Left/RightButtonPushed` (called by the stage arrows / arrow keys when Paint is on), `CenterButtonPushed`, `SavepaintButtonPushed` | Builds a stitched overview on a 21x21-tile canvas (0.65 µm/px) to find the sample and center it. Paint moves need a step ≥ 40 µm (else a message and no move) |
 | AFG_scan, Roll Scan / Roll slider | `AFG_scanButtonValueChanged`, `RollScan*`, `RollSlider*` | Turns the light-sheet ramp on AFG ch1 on or off; roll uses ch2 |
 | **M-by-N tiles panel** | see section 3 | Multi-tile z-stack acquisition |
 | 640 nm analog tools: StopAnalog, SvAFG2 | `StopAnalogButtonPushed`, `SvAFG2ButtonPushed` | **StopAnalog** returns the 640 nm laser to CW, sets `afg2` ch1/ch2 to 0 V DC and the camera to internal trigger (use it if 640 nm Analog imaging stops with an error). **SvAFG2** runs a full exposure x power matrix from `HDPRTable` column 3 at the current position. The colleague's test controls SaveImAFG2, SaveImCam, TestTrigger and AFG_Manual_mW were removed on 2026-11-04 (code in `_archive/MMcodeOrcaV2/LightSheetControl_before_remove_test_callbacks.mlapp`). `isAnalogMode` is still set by StopAnalog but never read. The 640 nm Analog *imaging* mode (Mode 640nm = Analog: two light intensities for the 640 nm channel) is in `startimagealltilesButtonPushed` and does not use these buttons; **do not change it** |
 | Paint tile grid (2026-11-04) | `drawPaintTileGrid`, `selfmade/paintTileGrid.m` | In the Paint view, orange boxes show the Vertical x Horizontal tiles that create scan pattern would make at the current position (15 % overlap, numbered); redrawn after every Paint move and when the tile fields change |
-| export tiles / import tiles (2026-11-04) | `exportTiles`, `importTiles` (bound to `exporttilesButton` / `importtilesButton` in `startupFcn`), `selfmade/writeTileList.m`, `readTileList.m` | xlsx with sheets `Tiles` (one row per tile: saved, skip, start/end, stage X/Y/Z, path, planned X/Y/Z) and `Grid`; importing makes it the current scan pattern. `imaging_params_*.xlsx` also gets these sheets |
+| Tile focus + tile table (2026-11-20) | `setTileFocus`, `clearTileFocus`, `tileFocus`, `refreshTileTable` (buttons, label `TileFocusInfo` and table `TileTable` made in `applyLayout`, panel 3), `selfmade/tileFocusOf.m`, `tileTableData.m`, `focusSheetRows.m` | Per-tile focus of the detection (Obj) lens. **Set tile focus** reads the detection lens position and stores it for the current tile (move to tile) and the current wavelength, in `checkpoints_multipletile(t).tile_focus` (1x4, mm, NaN = default). **Tile focus = default** clears it. Works after create scan pattern, also before the tile's start/end are saved; not on skipped tiles. The table lists every tile: #, Start, End, and the focus of 488/561/640/730 (`default` = the color's Detection value in the offset table). Since 2026-11-20 the Tile States box is hidden (the table replaces it; unsaved tiles show `none` as Start/End). The hidden box still holds the status text that start image all tiles checks (line 1 ends with "Yes" when all tiles are saved) Clicking a row of the table asks "Move the stage to tile N?" and then does the same as move to tile (`selectTileFromTable`; nothing for the current tile or during imaging) |
+| Focus editor (2026-11-20) | `selfmade/focusEditor.m` (button "Focus editor" in panel 3, made in `applyLayout`), `tileFocus(app, t, k, y)`, `isImaging`, `selfmade/tileFocusOps.m`, `focusAtDepth.m`, `focusSegments.m` | Separate window (classic figure, over panel 4) for the current tile (start/end must be saved): one bar per color from start (left) to end; grey = default, blue = tile focus, orange = depth segment; blue line = point, dashed = stage depth; the current wavelength's row is highlighted. Pick the point (click a bar, type it, or Use stage depth), adjust Obj, then **start -> point** / **point -> end** with the current lens or with Default. Later settings overwrite earlier ones; the point belongs to "point -> end". **Whole tile** = Set tile focus; Set tile focus and Tile focus = default remove that color's segments. Also Move stage here, Lens to focus here, Undo last (this window only), Refresh. Data: `checkpoints_multipletile(t).focus_ops` (rows `[k from to focus]`, NaN = default). Locked while imaging. The tile table shows `N seg` when a color has more than one part It always shows the current tile (move to tile) and wavelength; since 2026-11-20 it redraws by itself when either changes (`onCleanup` refresh in `movetotileSpinnerValueChanged` / `LightwavelightValueChanged`) |
+| export tiles / import tiles (2026-11-04) | `exportTiles`, `importTiles` (bound to `exporttilesButton` / `importtilesButton` in `startupFcn`), `selfmade/writeTileList.m`, `readTileList.m` | xlsx with sheets `Tiles` (one row per tile: saved, skip, start/end, stage X/Y/Z, path, planned X/Y/Z, and since 2026-11-20 Focus488_mm..Focus730_mm, empty = default), `Grid` and (since 2026-11-20) `FocusSegments` (Tile, Color_nm, From_um, To_um, DetLens_mm per Focus editor operation); importing makes it the current scan pattern. `imaging_params_*.xlsx` also gets these sheets |
 | command-window log (2026-11-04) | `startLog`, `selfmade/flushDiary.m` | `diary` to `<repo>\logs\` at start-up, moved to `<output folder>\matlab_log_<date>.txt` when the saving directory is chosen; written to disk every 30 s and after every tile |
-| Window layout (2026-11-04) | `selfmade/applyLayout.m`, called in `startupFcn` | At start-up, moves the components into 5 panels by workflow (top bar, 1 channel tuning, 2 stage + Paint, 3 z per tile, 4 acquisition), window 960 x 960 on the left half of the screen; Live View and Paint open on the right half (`[965 45 945 945]`). Roll slider / Roll Scan are hidden. Top bar (2026-11-07): wavelength, laser power, filter wheel on the left; light path and shutter on the right. The offset table has no Galvo_Z column since 2026-11-07 (removed from `app.state_offset` at start-up; imaging sends 0 V on the roll channel). Design View still shows the old layout; components not placed by `applyLayout` are listed in the command window. Remove the `applyLayout(app)` line to go back |
-| Tile States box | `updateTileStatus` | Line 1: current tile and "save all checkpoints? Yes/No" (the imaging button checks the "s" at the end); line 2: min start / max end; line 3: saved count and tiles not saved; then every tile, two per line (`start -- end`, `skip` or `---`), fixed-width font |
+| Window layout (2026-11-04) | `selfmade/applyLayout.m`, called in `startupFcn` | At start-up, moves the components into 5 panels by workflow (top bar, 1 channel tuning, 2 stage + Paint, 3 z per tile, 4 acquisition), window 960 x 960 on the left half of the screen; Live View and Paint open on the right half (`[965 45 945 945]`). Roll slider / Roll Scan are hidden. Top bar (2026-11-07): wavelength, laser power, filter wheel on the left; light path and shutter on the right. The offset table has no Galvo_Z column since 2026-11-07 (removed from `app.state_offset` at start-up; imaging sends 0 V on the roll channel). Design View still shows the old layout; components not placed by `applyLayout` are listed in the command window. Remove the `applyLayout(app)` line to go back **Layout v2 (2026-11-20):** 4 panels: a settings panel on top left (old top bar + panel 4: directory, laser/camera, light path, autofocus method, colors with power/exposure, z step, AF step, 640 nm mode and tools, HDR powers, reset/start), as wide as panels 1 (channel tuning) and 2 (stage + Paint) below it; panel 3 (z bounds and focus per tile) full height on the right, 430 px wide. Galvo buttons/step below each slider; lens buttons narrower; `UITable_path` is 4x1 (rows GalvoX, GalvoY, Excitation, Detection; `UITable_pathCellEdit` uses the row index); the offset table is shown transposed as `OffsetView` (rows GalvoX, GalvoY, Det, Ext; columns 488..730; edits go through `offsetViewEdit` into `app.state_offset` and the hidden `UITable_offset`, which the rest of the code still reads; `refreshOffsetView` after start-up and save offset). The Focus editor window now opens over the lower part of panel 3 |
+| Tile States box (hidden since 2026-11-20) | `updateTileStatus` | Not visible any more (the tile table replaces it), but still filled: line 1: current tile and "save all checkpoints? Yes/No" (the imaging button checks the "s" at the end); line 2: min start / max end; line 3: saved count and tiles not saved; then every tile, two per line (`start -- end`, `skip` or `---`), fixed-width font |
 
-Keyboard shortcuts (`UIFigureKeyPress`):
-- `a`/`d`: previous/next tile
-- `w`/`s`: next/previous checkpoint
-- `i`/`o`: stage depth −/+
-- `k`/`l`: save tile start/end
-- `space`: save checkpoints
-- `←`/`→`: detection lens
+Keyboard shortcuts (2026-11-09; `UIFigureKeyPress` → `stageKeyPress`, `keyMoveDone`):
+- `↑`/`↓`/`←`/`→` move the stage like ⏫/⏬/⏪/⏩ (`ButtonPushed`, `Button_4Pushed`,
+  `Button_3Pushed`, `Button_2Pushed`). While Paint is on and the Painting View is open they
+  run the Paint Up/Down/Left/Right buttons instead (move + new image in the Paint view).
+- They work in the control window, the Live View and the Painting View (both get the same
+  `KeyPressFcn` when they are created).
+- A key pressed while a key move is running is **dropped** (not queued; `app.keyMoveBusy`),
+  so holding a key down moves only one step. Keys are also ignored during imaging
+  (`app.imagingBusy`, since 2026-11-20).
+- Nothing happens while the focus is in an edit field, drop-down, table, check box etc.
+  (the key belongs to that control), or with Shift/Ctrl/Alt. Click on an empty part of the
+  window first. Depth (Y) has no key.
+- The same checks as the buttons apply (status lamp green: no move; Paint step < 40 µm: warning).
+- The old shortcuts (`a`/`d` tile, `w`/`s` checkpoint, `i`/`o` depth, `k`/`l` save start/end,
+  `space` save checkpoints, `←`/`→` detection lens) were switched off on 2026-11-03 and are
+  still off; this list was not updated then.
 
 ## 3. Multi-tile imaging workflow
 
@@ -81,14 +92,33 @@ Keyboard shortcuts (`UIFigureKeyPress`):
    global z grid, for every selected color, in the usual folders (X/Z from the position saved
    with the tile; the stage is not moved). Saving checkpoints on the tile later un-skips it.
    When every tile is saved, the struct is also written to `scanpattern.mat`.
+   **Tile focus (2026-11-20):** where a color's default focus is wrong on a tile (e.g. a
+   crack), move to the tile, choose the wavelength, adjust with Obj ◀ ▶ and press
+   **Set tile focus**; the tile table shows the value. **Tile focus = default** undoes it.
+   For different focus at different depths of one tile (after its start/end are saved), use
+   the **Focus editor** window (see section 2).
 3. Choose the colors (W488/W561/W640/W730), their Power_* / Exposure_* values, the z step,
    the AutoFocus step and method, and the 640 nm mode (Serial/Analog). Set the **Image saving directory**.
 4. Press **start image all tiles**. This runs `startimagealltilesButtonPushed`, which:
-   - writes `imaging_params_<timestamp>.xlsx` (offsets, HDPR, AFG, powers, start/end/slice grids, settings)
+   - (2026-11-20) after its checks, freezes the main window until it ends (normal end, Cancel or
+     error): `freezeGui` greys out every enabled control (incl. the `applyLayout` panels/buttons and
+     the tile table), arrow keys are ignored (`app.imagingBusy`) and the window's × only shows a
+     message; `unfreezeGui` (via `onCleanup`) puts everything back, controls that were already off
+     stay off. **Cancel** in the progress window still works (it is a separate window)
+   - writes `imaging_params_<timestamp>.xlsx` (offsets, HDPR, AFG, powers, start/end/slice grids, settings,
+     and since 2026-11-20 sheet `10_Focus`: Tile, Color, From_um, To_um, DetLens_mm, Source = tile/default
+     for every imaged tile and selected color)
    - for each tile, then each selected color:
      1. switches lasers off, sets the galvo offset and filter wheel, waits 6 s
      2. moves the stage to the tile and its first depth
      3. turns the laser on at the set power, moves both lenses to the color's offsets, and opens the shutter
+        (since 2026-11-20 the detection lens goes to `tileFocus(app, tile, color)`, i.e. the tile's
+        focus if set, else the color's offset, and imaging waits with `readLensPos` until it has
+        stopped; same for 640 nm Serial and Analog). Since 2026-11-20 (depth segments) this is the
+        focus at the first depth, and before every layer the code checks `tileFocus(app, tile,
+        color, depth)`: if the layer is in another Focus editor segment, the detection lens moves
+        there and imaging waits with `readLensPos` (the lens does not move within a segment).
+        The periodic autofocus is centred on the focus of the current segment.
      4. for every depth in a **global** z grid (`start_min : step : end_max`, cut to this tile's
         start..end): moves the stage, runs `dynamic_focus` every `focus_count` slices, snaps
         the image, and writes a TIFF
@@ -105,7 +135,9 @@ Output layout:
 ## 4. Autofocus (`dynamic_focus`)
 
 The search starts from the color's `Detectionlens` value in `UITable_offset`, not from the
-current position. The two methods:
+current position. Since 2026-11-20 imaging passes a third argument, `dynamic_focus(app, channel,
+center)`, with `tileFocus(...)`: the search (and the fall-back position) is centred on the tile's
+focus if one is set. Without the third argument it uses the offset value as before. The two methods:
 - **Entropy (Original)**: scan ±20 µm in 4 µm steps and take the Shannon entropy of the
   central 1000x1000 crop. The lens moves to the maximum only if the curve has a single peak;
   otherwise it returns to the offset.
@@ -155,9 +187,10 @@ microscope). Priority: **High** = wrong hardware state or lost/misplaced data,
 | `dynamic_focus`, Tenengrad branch (was open bug 4) | the final `1PA` move and the two revert moves had no wait, so the first images could be taken while the lens was moving | Fixed 2026-11-05: `readLensPos` after each of the three moves (not tested on the microscope) |
 | `dynamic_focus` (Entropy) | extra `1TP?` left a stale reply in the serial buffer; lens position reads lagged | Fixed 2026-11-03 (query removed; `readLensPos.m` added) |
 | `selfmade/getpos.m` | scientific-notation replies parsed wrongly | Fixed 2026-11-03 |
+| lens ◀ ▶ buttons (`left/rightButtonExt/Obj`) | a click during a move ran inside the running callback (during the `pause` in `readLensPos`), so moves overlapped; reported 2026-11-20 as "the left/right direction sometimes reverses" (the code direction never changed: left = +, right = -; the old code on D: also showed stale positions, one or more steps behind) | Fixed 2026-11-20: both buttons of the lens are disabled until the move has finished; clicks queued meanwhile are dropped (not tested on the microscope). Not covered: wavelength change / autofocus moving the same lens at the same time |
 | `createscanpatterncenterButtonPushed` | kept tile data from the previous pattern | Fixed 2026-11-03 |
 | `SnapHistogramButtonPushed` | used the missing `app.TargetIntensityEditField` | Disabled 2026-11-03 (code commented out) |
-| `UIFigureKeyPress` → `movenexttile` / `moveprevioustile` / `movenextcheck` / `moveprevcheck` | used the missing `app.movecheckpoints1x6Spinner` | Disabled 2026-11-03 (key handler commented out; the four helpers are now dead code) |
+| `UIFigureKeyPress` → `movenexttile` / `moveprevioustile` / `movenextcheck` / `moveprevcheck` | used the missing `app.movecheckpoints1x6Spinner` | Disabled 2026-11-03 (key handler commented out; the four helpers are now dead code). Since 2026-11-09 the handler only runs the arrow-key stage moves (`stageKeyPress`); the old keys stay off. The shortcut list in section 2 still showed the old keys until 2026-11-09 |
 | `UITable_pathCellEdit` | used the missing `app.galvo_ZSlider` | Disabled 2026-11-03 (Galvo_Z column locked, branch commented out); rewritten 2026-11-05 for the merged table (no Galvo_Z column) |
 
 Note: `save_checkpointButtonPushed` still uses `app.galvo_ZSlider`, but no button calls

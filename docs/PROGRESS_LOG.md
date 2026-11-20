@@ -6,6 +6,423 @@ so they exist only on the disk where the edit was made.
 
 ---
 
+## 2026-11-20: Focus editor follows tile / wavelength; click a tile-table row to go to that tile
+
+Request: the Focus editor works on the current tile (move to tile) and wavelength, but did not
+redraw when they changed (actions then refused with "moved to tile N"); make it follow, and let a
+click on a row of the tile table select that tile.
+
+- `.mlapp`: `movetotileSpinnerValueChanged` and `LightwavelightValueChanged`: first line
+  `editorRefresh = onCleanup(@() focusEditor(app, 'refresh'))`, so the editor (if open) redraws after
+  every return path; the rest of both callbacks unchanged. New public method
+  `selectTileFromTable(app, event)`: ignores clicks on the current tile and during imaging; asks
+  "Move the stage to tile N?" (`uiconfirm`, R2017b+); on Move sets the spinner and calls
+  `movetotileSpinnerValueChanged` (same checks and stage move as the spinner).
+- `selfmade/applyLayout.m`: tile table `CellSelectionCallback` -> `selectTileFromTable`.
+- Docs: `V5_app_guide.md` section 2.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_tile_pick.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/applyLayout_before_tile_pick.m`,
+  `_archive/docs/{PROGRESS_LOG,V5_app_guide}_before_tile_pick.md`.
+- Checks (R2026b): 71/71 blocks + startup verbatim; only `code` spliced; only the 2 callbacks and the
+  editable section changed; checkcode 376 -> 376; applyLayout 0 messages. Mock test 9/9: row click +
+  Move -> spinner, stage at the tile, editor shows it; Cancel / current tile / imaging -> nothing;
+  spinner change and wavelength change (488, None) -> editor title follows.
+- **Not tested on the microscope.** To check there: clicking a row asks and moves the stage like
+  move to tile; the open Focus editor switches tile / highlighted color at once.
+
+---
+
+## 2026-11-20: layout v2 (settings panel on top, panel 3 full height, transposed tables)
+
+Request: merge the top bar and panel 4 into one larger settings panel, as wide as panels 1 and 2
+only; panel 1 narrower: transpose the two tables (taller), narrower lens buttons, galvo X/Y buttons
+and step below each slider; panel 2: the three steps together below the arrows and depth buttons,
+more prominent depth buttons, Paint buttons in a column; panel 3 full height and as wide as possible
+(many tiles).
+
+- `selfmade/applyLayout.m` rewritten (same components, only Parent/Position/display properties):
+  settings panel [5 610 515 345] (directory; wavelength/power/filter, exposure/contrast/AFG, Enable /
+  Disable Camera; path/shutter/save image/autofocus; colors (check boxes now "488".."730") with power
+  and exposure, z step, AF step, Mode 640; HDR powers table, SvAFG2, StopAnalog, Reset, start);
+  panel 1 [5 5 255 600]; panel 2 [265 5 255 600]; panel 3 [525 5 430 950] with the tile table
+  412 px wide. Panel 2: arrow cross, depth buttons 118x44 bold, orange (close) / purple (away), the
+  three step drop-downs stacked, Paint / Center / Save paint in a column, stage position, Min Z,
+  tile grid; green-lamp text shortened. Some labels shortened (Ext step, Obj step, Path, z step (um),
+  AF step (um), Mode 640, HDR label).
+- Tables: `UITable_path` 4x1 (rows GalvoX/GalvoY/Excitation/Detection). Offset table: new
+  `OffsetView` (rows GalvoX/GalvoY/Det/Ext, columns 488..730, editable); `UITable_offset` hidden but
+  unchanged as the data source (40 reads in the code untouched).
+- `.mlapp`: property `OffsetView`; `refreshPathMotorTable` fills a 4x1 column; new public methods
+  `refreshOffsetView`, `offsetViewEdit` (writes `app.state_offset.(item)(color)` and
+  `UITable_offset.Data`, invalid input ignored); `UITable_pathCellEdit` uses `event.Indices(1)`;
+  `startupFcn`: path table ColumnName {'Path 1'} + RowName, ColumnEditable true, and
+  `refreshOffsetView` after the offset data is set; `saveoffsetfordifferentcolorButtonPushed`:
+  `refreshOffsetView` at the end. Imaging code unchanged.
+- `selfmade/focusEditor.m`: window 420 x 280 over the lower part of panel 3 (was 950 x 200 over
+  panel 4), buttons in 4 rows, info text 2 lines.
+- Docs: `V5_app_guide.md` sections 2 (layout, save offset).
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_layout_v2.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/{applyLayout,focusEditor}_before_layout_v2.m`,
+  `_archive/docs/{PROGRESS_LOG,V5_app_guide}_before_layout_v2.md`.
+- Checks (R2026b): 71/71 blocks + startup verbatim; only `code` spliced; checkcode 376 -> 376 (3
+  ALIGN moved); applyLayout / focusEditor 0 messages. Screenshots of the window and the Focus editor
+  (layout demo without hardware): nothing overlaps or is cut off. Mock tests: offset view =
+  transposed data; editing Det/561 and GalvoX/730 updates state_offset, the hidden table and the
+  view, and `tileFocus` uses the new default; invalid input ignored; path table 4x1, rows 1/3/4 set
+  galvo X / move the excitation / detection lens. Step 2 test re-run (Focus editor, 3 imaging runs):
+  29/29 passed.
+- **Not tested on the microscope.** To check there: the window fits the screen; editing the offset
+  table and "save offset for different color" update the values; editing the path table moves the
+  right lens / galvo.
+
+---
+
+## 2026-11-20: one set of stage arrows (Paint merged); depth buttons "Close to / Away from camera"
+
+Request: Paint Up/Down/Left/Right and the stage arrows do the same moves; keep one set. Paint on +
+step < 40 um: message, no move (as before). Hide the Paint direction buttons. Arrows in the middle of
+panel 2 and larger. Depth buttons below the arrows, labelled by the sample's movement relative to
+the camera; in panel 3 replace "Deep"/"Surface" accordingly.
+
+- Read from the code: Paint Up/Down/Left/Right = the same axis, direction and step as the stage
+  ⏫ (`ButtonPushed`, X -), ⏬ (`Button_4Pushed`, X +), ⏪ (`Button_3Pushed`, Z +), ⏩
+  (`Button_2Pushed`, Z -), plus snap + add to the Paint canvas, and they need step >= 40 um. The arrow
+  keys already used the Paint versions when Paint is on (2026-11-09). Depth: ⍟ (`Button_5Pushed`)
+  = Y - step, limited by Min Z "to prevent hitting lens" = towards the camera; ⌾ (`Button_6Pushed`)
+  = Y + step = away. Tile start = smaller Y = close to the camera (was labelled "Deep").
+- `.mlapp`: new method `paintMoveInstead(app, paintFcn, event)` (after `stageKeyPress`): if Paint
+  is on and its window is valid, make it the current figure and run the Paint move; the 4 stage
+  arrow callbacks call it first and return if it ran. Otherwise unchanged (green lamp check etc.).
+- `selfmade/applyLayout.m`: panel 2: arrow cross centred, buttons 60x46 (font 18); step drop-downs
+  in the corners ("Up/Down step", "Left/Right step", "Depth step"); depth buttons below, 138x34,
+  text "Close to camera" / "Away from camera"; Paint panel one row (Paint, Center, Save paint), its
+  Up/Down/Left/Right `Visible = 'off'`; rows below moved up. Panel 3: red labels "Close to camera"
+  (start) and "Away from camera" (end), field labels "start" / "end".
+- `selfmade/focusEditor.m`: comments only (start = close to camera).
+- Docs: `V5_app_guide.md` section 2.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_paint_merge.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/{applyLayout,focusEditor}_before_paint_merge.m`,
+  `_archive/docs/{PROGRESS_LOG,V5_app_guide}_before_paint_merge.md`.
+- Checks (R2026b): 71/71 blocks verbatim; only `code` spliced; only the 4 callbacks and the editable
+  section changed; checkcode 380 -> 376 (INUSD -4: `event` now used; 3 ALIGN moved);
+  applyLayout/focusEditor 0 messages. Mock test (stage mock): Paint off -> X-10, X+10, Z+20, Z-20;
+  Paint on, step < 40 -> 4x "choose a bigger step size", no move, Paint window current figure; Paint
+  on but window closed -> normal move; green lamp blocks; Paint direction buttons hidden. Screenshot:
+  panels 2 and 3 fit. Not tested: a full Paint move (needs the camera; the Paint code is unchanged).
+- **Not tested on the microscope.** To check there: with Paint off the arrows move the stage as
+  before; with Paint on they add images to the Paint view in the same directions as the old Paint
+  buttons; "Close to camera" really moves the sample towards the detection objective.
+
+---
+
+## 2026-11-20: Tile States box hidden; unsaved tiles show "none" in the tile table
+
+Request: with the tile (focus) table, the Tile States box is not needed; unsaved tiles should show
+"none" as start/end, saved ones their numbers.
+
+- `selfmade/applyLayout.m`: `TileStatesTextArea` and its label `Visible = 'off'` (not removed: start
+  image all tiles still checks that its first line ends with "Yes"); panel 3 rows moved up: Set tile
+  focus / Tile focus = default, then Focus editor, the info label, and a taller tile table.
+- `selfmade/tileTableData.m`: Start/End of an unsaved tile = `none` (was `---`).
+- `.mlapp` unchanged. Docs: `V5_app_guide.md` section 2.
+- Lost from view: the "min start / max end" line and the list of unsaved tiles (the table shows
+  unsaved tiles as `none`).
+- Backup: `_archive/MMcodeOrcaV2/selfmade/{applyLayout,tileTableData}_before_hide_tilestates.m`,
+  `_archive/docs/{PROGRESS_LOG,V5_app_guide}_before_hide_tilestates.md`.
+- Checks: checkcode 0 messages for both files; layout demo (app class from the installed .mlapp,
+  startup replaced by applyLayout, R2026b): Tile States hidden, buttons and table fit in panel 3,
+  unsaved tile shows none/none.
+- **Not tested on the microscope.**
+
+---
+
+## 2026-11-20: per-tile focus (step 2): depth segments, Focus editor window
+
+Request: step 2 of the per-tile focus (see "per-tile focus (step 1)" below): inside one tile, set
+"start -> point" or "point -> end" to a new focus; the stage may wait while the lens moves; a bar
+view in a separate small window. Fengyi (2026-11-20): "Whole tile" (and Set tile focus) removes
+that color's segments; the window may cover panel 4. Later settings overwrite earlier ones (agreed).
+
+- New `selfmade/focusEditor.m`: classic figure (R2019a-safe clicks), Tag `LightSheetFocusEditor`,
+  `HandleVisibility` callback, at `[6 47 950 200]` over panel 4. Shows the current tile of the main
+  window (start/end must be saved; skipped / unsaved / no scan pattern -> reason in the title).
+  One bar per color, start (left) .. end: grey default, blue tile focus, orange segment, value
+  labels; blue line = point, dashed = stage depth (read when redrawn); current wavelength row
+  highlighted. Point: click a bar, type it (outside -> nearest end), or Use stage depth (rounded to
+  1 um). Buttons: start -> point / point -> end with the current lens (read with `readLensPos`, motor
+  table updated) or with Default; Whole tile (= `setTileFocus`); Move stage here (Y only); Lens to
+  focus here; Undo last (snapshots of this window, lost when it closes); Refresh. Every action first
+  checks: not imaging (`isImaging`), the main window still on the same tile (else redraw + message),
+  wavelength chosen, point picked. Messages in an info line and in the log.
+- New `selfmade/tileFocusOps.m` (field `focus_ops`, rows `[k from to focus]`, half-open
+  `from <= y < to`, `-Inf`/`Inf` = start/end side, focus NaN = default), `focusAtDepth.m` (last
+  segment containing y > tile focus > default), `focusSegments.m` (merged parts over start..end).
+- `tileTableData.m`: `N seg` when a color has more than one part. `focusSheetRows.m`: 10_Focus has one
+  row per part, Source = segment / tile / default. `writeTileList.m` / `readTileList.m`: sheet
+  `FocusSegments` (Tile, Color_nm, From_um, To_um, DetLens_mm; empty = start / end / default),
+  optional when reading. `applyLayout.m`: "Focus editor" button right of the Tile States label.
+- `.mlapp` (`appModel.mat` + `document.xml`; re-unzipped from the current file, which has the
+  imaging-freeze edit of the other session):
+  - `tileFocus(app, ti, k, y)`: optional depth -> `focusAtDepth`. `setTileFocus` / `clearTileFocus`:
+    also remove color k's segments. `refreshTileTable` also redraws the Focus editor if open. New
+    public `isImaging` (returns `imagingBusy`).
+  - `createscanpatterncenterButtonPushed`: `focus_ops = zeros(0,4)` per tile.
+  - `startimagealltilesButtonPushed`, each color: `det_current = tileFocus(app, tile_index, k,
+    positions(1))` at the start of the tile; new step "3b" in the layer loop (after the file name,
+    before the autofocus / Serial-Analog branch): `det_target = tileFocus(..., positions(i))`; if it
+    differs from `det_current` by > 1e-6 mm: `1PA`, `readLensPos`, `det_current = det_target`, log
+    line. The periodic autofocus uses `det_current` (centre and reset position). The 640 nm Analog
+    code itself is unchanged; step 3b runs before its branch, so Analog uses the segments too.
+- Docs: README file list; `V5_app_guide.md` sections 2 and 3.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_focus_segments.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/{applyLayout,writeTileList,readTileList,tileTableData,focusSheetRows}_before_focus_segments.m`,
+  `_archive/docs/PROGRESS_LOG_before_focus_segments.md`, `_archive/docs/V5_app_guide_before_focus_segments.md`,
+  `_archive/README_before_focus_segments.md`.
+- Checks (R2026b, F:\MATLAB; no R2019a on this PC): 71/71 code blocks + startup verbatim in
+  `document.xml`; full `load` of `appModel.mat`; only `code` spliced (other elements byte-identical);
+  only `document.xml` and `appModel.mat` changed in the zip, entry order kept;
+  `minimumSupportedMATLABRelease` R2018a. checkcode 386 -> 380 (ADPROP -6, 3 ALIGN moved, nothing
+  new); new/changed `selfmade` files 0 messages (writeTileList: the 2 old datestr/now notes).
+  Mock test (real class from `document.xml`; lens, stage, camera, lasers, DAQ, AFG and `imwrite`
+  replaced by logging mocks), 29/29 passed:
+  - Focus editor: title for skipped tile; one window only; Whole tile; point -> end / start -> point
+    with lens and default; undo; other color unaffected; Lens to focus here (default and segment);
+    Move stage here; Use stage depth; typed point outside; tile changed -> nothing set; locked while
+    imaging; Set tile focus removes the color's segments; 10_Focus rows per part; export/load keeps
+    segments, file without FocusSegments loads.
+  - `startimagealltilesButtonPushed` run end to end (3 tiles + 1 skipped, z step 50 um): 488 + 640
+    Serial without autofocus, with Tenengrad autofocus every 5 layers, and 640 Analog: no imaging
+    error; at every saved image / Analog sequence the detection lens was at the focus of that depth
+    (68/68 each; with autofocus every camera frame within +-0.06 mm of it); lens moves without
+    autofocus = 1 per tile/color plus 1 per segment change; imaging_params has 10_Focus and
+    FocusSegments. Not tested: a real mouse click on a bar (MATLAB does not allow setting the click
+    position in a script; the same code path as a typed point is tested), the Entropy autofocus
+    (needs more camera mocks; unchanged code).
+- **Not tested on the microscope.** To check there: Focus editor opens over panel 4 and shows the
+  current tile; clicking a bar sets the point; start -> point / point -> end store the Obj position
+  and the bars and tile table update; imaging moves the detection lens at segment borders (log line
+  "Focus segment: detection lens -> ...") and waits; 640 nm Analog images use the segment focus;
+  10_Focus lists the segments.
+
+---
+
+## 2026-11-20: main window frozen during "start image all tiles"
+
+Request: once imaging starts, freeze the GUI so that nobody can click something and spoil the run.
+Fengyi: the lens arrows only need to work for manual adjustment outside imaging; during imaging the
+focus is set by the program (per-color offsets, autofocus, per-tile focus).
+
+- `.mlapp` (`appModel.mat` + `document.xml`), applied on top of the per-tile focus version below
+  (11:47; that session finished first, then this edit was re-applied to its file):
+  - Property `imagingBusy = false` (after `keyMoveBusy`).
+  - New public methods `freezeGui(app)` and `unfreezeGui(app, frozen)` (after `lensButtonsOn`).
+    `freezeGui`: `findall(app.UIFigure)`, every object with an `Enable` property that is `'on'` is
+    set to `'off'` and remembered; `UIFigure.CloseRequestFcn` replaced by a `uialert`
+    ("Imaging is running. Press Cancel in the progress window first."); `imagingBusy = true`.
+    `unfreezeGui`: `drawnow` (queued arrow keys are dropped while `imagingBusy` is still true), the
+    remembered controls back to `'on'`, the old `CloseRequestFcn` back, `imagingBusy = false`.
+  - `startimagealltilesButtonPushed`: 4 lines right after the "All tiles are skipped" check
+    (all early `return`s are before it): `frozenGui = freezeGui(app);
+    guiCleanup = onCleanup(@() unfreezeGui(app, frozenGui));`, so the window is restored at the
+    normal end, after Cancel and after an error. Nothing else in the function changed; the 640 nm
+    Analog code is untouched.
+  - `stageKeyPress`: returns at once while `imagingBusy` (arrow keys also from Live View / Paint).
+  - The progress window (`app.waitbar`, `uiprogressdlg` with Cancel) is a separate `uifigure`
+    created after the freeze, so Cancel still works. The tile focus buttons and tile table are
+    greyed out too (agreed with the tile-focus session).
+- Edited with R2026b by script; `code` element spliced into the original `appModel.mat`
+  (`components`, `appData`, subsystem byte-identical); re-zipped with .NET in the original order.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_imaging_freeze.mlapp` (= the per-tile
+  focus version, 324167 bytes), `_archive/docs/PROGRESS_LOG_before_imaging_freeze.md`,
+  `_archive/docs/V5_app_guide_before_imaging_freeze.md`.
+- Checks: 71/71 code blocks and the startup block verbatim in `document.xml`; full `load` of
+  `appModel.mat` works; unzipped `.mlapp` identical to the edited files; checkcode R2026b 386 -> 386
+  (only 3 ALIGN notices moved); `minimumSupportedMATLABRelease` R2018a. Functions used (`findall`,
+  `isprop`, `arrayfun`, `uialert`, `onCleanup`) exist in R2019a; checkcode R2019a not run (no R2019a
+  on this PC). Mock test in R2026b (the same two methods in a class with a visible `uifigure` of
+  304 controls, one already disabled): all off during the run, × does not close the window, all
+  restored after a normal end and after an error, the disabled one stays off.
+- **Not tested on the microscope.** To check there: after pressing start image all tiles the whole
+  main window is grey; arrow keys do nothing; × shows the message; Cancel in the progress window
+  stops the run and the window becomes usable again; after a normal end (and after an imaging
+  error) every control works again (lens ◀ ▶, stage arrows, tables, Set tile focus).
+
+---
+
+## 2026-11-20: per-tile focus (step 1): Set tile focus, tile table, 10_Focus sheet
+
+Request: each color has one fixed focus (offset table); on cracked samples it fails on some tiles.
+Fengyi wants: a default per color (as now); after create scan pattern, a focus per tile and color;
+later (step 2) depth segments inside a tile ("start -> point" or "point -> end" gets a new focus,
+no interpolation; the stage may wait while the lens moves), with a bar view in a separate small
+window. Only the detection (Obj) lens is set per tile (Fengyi: Obj alone is enough to rescue a
+tile). The focus must show in the window (not only the command window) and be written to the
+parameter xlsx. 640 nm: allowed to change the lens target, Analog logic unchanged, and Analog must
+use the tile focus (Fengyi, 2026-11-20). Controls may be created in code (Fengyi, 2026-11-20).
+Later segments overwrite earlier ones (agreed for step 2). The three empty first sheets of the xlsx
+on the microscope PC: caused by MATLAB R2019 when writing a new xlsx (R2026b does not do it);
+Fengyi: leave it.
+
+- `.mlapp` (`appModel.mat` + `document.xml`):
+  - Editable section: public properties `TileTable`, `TileFocusInfo`; new public methods after
+    `skippedTiles`: `tileFocus(app, ti, k)` (tile focus if set, else `Detectionlens(k)`),
+    `tileFocusTarget`, `setTileFocus` (reads the detection lens with `readLensPos`, updates the
+    motor table, stores `checkpoints_multipletile(t).tile_focus(k)`), `clearTileFocus` (NaN = default,
+    lens not moved), `showTileFocusInfo` (label + log), `refreshTileTable`. Messages if there is no
+    scan pattern, no current tile, no wavelength, or the tile is skipped.
+  - `updateTileStatus`: with the table present, Tile States shows only its 3 status lines (line 1
+    still ends with "Yes" for the imaging check); then `refreshTileTable`. Without the table (no
+    `applyLayout`) the old text list is kept.
+  - `dynamic_focus(app, channel, center)`: optional 3rd argument = search centre (and fall-back).
+  - `importTiles`: `refreshTileTable` before the final message.
+  - `createscanpatterncenterButtonPushed`: `tile_focus = NaN(1,4)` for every tile; table refresh.
+    `ResetImagingButtonPushed`: table refresh after the tiles are cleared.
+  - `startimagealltilesButtonPushed`: all 9 `UITable_offset.Data.Detectionlens(k)` -> `tileFocus(app,
+    tile_index, k)` (start of tile, before each periodic autofocus; 640 nm: start of tile and both
+    autofocus branches, Serial and Analog's temporary Serial); the 5 `dynamic_focus` calls get
+    `tileFocus(...)` as centre; after each of the 4 start-of-tile lens moves `readLensPos(sDetLens)`
+    waits until the detection lens has stopped. New sheet `10_Focus` (after `9_Skipped_Grid`). The
+    640 nm Analog code itself (laser AM switching, AFG sequence, power x exposure loop) is unchanged.
+- `selfmade/applyLayout.m`: panel 3: Tile States 100 px high; buttons "Set tile focus" and "Tile
+  focus = default", a label with the last action, and the table (#, Start, End, 488, 561, 640, 730).
+- New `selfmade/tileFocusOf.m`, `tileTableData.m`, `focusSheetRows.m` (R2019a functions only).
+- `selfmade/writeTileList.m` / `readTileList.m`: columns Focus488_mm .. Focus730_mm (written for all
+  tiles, also unsaved ones); old files without them load with every tile on default.
+- Docs: README file list; `V5_app_guide.md` sections 2, 3, 4.
+- Edited with R2026b (F:\MATLAB) by script; `code` spliced into the original `appModel.mat` (as in
+  the entry below): `components`, `appData` and the subsystem are byte-identical, only `code` and the
+  header offset changed. Re-zipped in the original entry order; only `document.xml` and
+  `appModel.mat` differ from before.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_tile_focus.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/{applyLayout,writeTileList,readTileList}_before_tile_focus.m`,
+  `_archive/docs/PROGRESS_LOG_before_tile_focus.md`, `_archive/docs/V5_app_guide_before_tile_focus.md`.
+- Checks: 71/71 code blocks and the startup block verbatim in `document.xml`; full `load` of
+  `appModel.mat` works; only the 3 callbacks above and the editable section changed. checkcode R2026b
+  363 -> 386: +23 ADPROP (the imaging loop's local `tile_index` has the name of a property, as in the
+  existing code), 3 ALIGN notices moved, nothing else. New and changed `selfmade` files: 0 messages
+  (writeTileList: the 2 old `datestr`/`now` notes). `minimumSupportedMATLABRelease` R2018a.
+  No R2019a on this PC: checkcode R2019a not run; only R2019a functions used (`uitable`/`uilabel`/
+  `uibutton` in a uifigure, `writecell`, `readcell`, `isvalid`, `sprintf`).
+  Mock test in R2026b (the real class from `document.xml`, startup replaced by `applyLayout`;
+  lens, stage and dialogs mocked), 29/29 passed: messages without scan pattern / tile / wavelength /
+  on a skipped tile; set and clear per tile and color; table, label and motor table update;
+  `tileFocus` returns tile value or default; focus kept after save checkpoints; Tile States 3 lines
+  ending in "Yes"; `scanpattern.mat` has `tile_focus`; 10_Focus rows (skipped tile absent) written
+  and read back; export/load tiles keeps the focus, an old file loads as default; `dynamic_focus`
+  with centre 1.2345 moves only within 1.2345 +- 0.06 mm (Tenengrad), without centre around the
+  default; Reset Imaging empties the table. Screenshot: table and buttons fit in panel 3.
+  Found and fixed during the test: Set tile focus before any tile was saved errored in
+  `updateTileStatus` (no `saved` field yet); now only the table is refreshed in that case.
+  The imaging loop itself was not run (needs the hardware).
+- **Not tested on the microscope.** To check there: start-up shows the new buttons and table in
+  panel 3; after create scan pattern the table lists all tiles as `default`; Set tile focus on a
+  tile after adjusting Obj shows the value in the table and label; imaging (incl. 640 nm Serial and
+  Analog) moves the detection lens to the tile's value (command window / log) and 10_Focus lists it;
+  autofocus searches around it.
+- **TODO (step 2) done 2026-11-20 (entry above):** depth segments inside a tile ("start -> point" / "point -> end", later
+  ones overwrite earlier ones), a separate small Focus editor window with one bar per color, and the
+  lens move per segment during imaging.
+
+---
+
+## 2026-11-20: lens buttons disabled during the move; left/right shown as arrows
+
+Request: Fengyi saw the excitation/detection lens left/right buttons sometimes go the other way
+(right making the value smaller, left larger). Investigation: the code has always sent
+left = `1PR+step`, right = `1PR-step` (same in the first commit `c2b7c76`), so the motor direction
+does not change in the code. Likely causes: on the old code (D:, not yet updated) the position read
+after a click could be a stale serial reply, one or more steps behind, which looks reversed after a
+change of direction (fixed in this copy on 2026-11-03 by `readLensPos`); and clicks during a move ran
+inside the running callback, so moves overlapped (also with wavelength change / autofocus moving the
+same lens). Asked for: disable the buttons during the move, and show arrows instead of left/right.
+
+- `.mlapp` (`appModel.mat` + `document.xml`):
+  - `leftButtonExtPushed`, `rightButtonExtPushed`, `leftButtonObjPushed`, `rightButtonObjPushed`:
+    at the start, return at once if the lens's buttons are already off (a click queued before
+    they went off); otherwise set both buttons of that lens to `Enable = 'off'`, `drawnow`, and
+    `onCleanup(@() lensButtonsOn(app, btns))`. The move and position read are unchanged.
+  - New public method `lensButtonsOn(app, btns)` (editable section, before
+    `refreshPathMotorTable`): `drawnow; pause(0.1); drawnow` (queued clicks run while the buttons
+    are still off and return), then `Enable = 'on'`. Runs also after an error; does nothing if
+    the window was closed during the move.
+  - Ext and Obj are separate motors: Ext buttons stay usable while the detection lens moves and
+    vice versa. Wavelength change, autofocus and the path table do not disable these buttons
+    (Fengyi, 2026-11-20: keep it so; the arrows only need to work for manual adjustment outside
+    imaging; during imaging the lenses must follow the per-color offsets / autofocus, and later
+    per-tile focus). Note for that future code: move the lenses with `1PA` + `readLensPos`, not
+    by calling the button callbacks (they return at once while the buttons are disabled).
+- `selfmade/applyLayout.m`: `leftButtonExt/Obj.Text = char(9664)` (◀), `rightButtonExt/Obj.Text =
+  char(9654)` (▶), like the galvo buttons. Direction unchanged: ◀ = position up, ▶ = position down
+  (note: for the galvo buttons ◀ is minus). Design View still shows left/right. Fengyi
+  (2026-11-20): keep this direction, do not swap the lens arrows to match the galvo buttons.
+- `startimagealltilesButtonPushed` and the 640 nm Analog code are unchanged.
+- Edited with R2026b (F:\MATLAB) by script (`load(...,'code')`, `save -append`). R2026b `-append`
+  re-encodes the subsystem (object data) even for unchanged code, so the new `code` element was
+  spliced into the original `appModel.mat`: `components`, `appData` and subsystem bytes are
+  identical to before, only `code` and the subsystem offset in the header changed. Re-zipped with
+  .NET in the original entry order.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_lens_arrows.mlapp`,
+  `_archive/MMcodeOrcaV2/selfmade/applyLayout_before_lens_arrows.m`,
+  `_archive/docs/PROGRESS_LOG_before_lens_arrows.md`, `_archive/docs/V5_app_guide_before_lens_arrows.md`.
+- Checks: 71/71 code blocks (editable section + callbacks) and the startup block verbatim in
+  `document.xml`; full `load` of the new `appModel.mat` works; unzipped `.mlapp` identical to the
+  edited files; checkcode R2026b 363 -> 363 (only 3 ALIGN notices moved); `applyLayout.m` 0
+  messages, ASCII; `minimumSupportedMATLABRelease` R2018a. No R2019a on this PC, so checkcode
+  R2019a was not run (functions used: `onCleanup`, `isvalid`, `strcmp(char(...))`, all R2019a).
+  Mock test in R2026b (same code in a class with a uifigure, 1 s "move"): both buttons off during
+  the move and on afterwards; a call while off does not move; a call interrupting the move
+  (timer during the `pause`) does not move; after an error in the move both buttons are on again.
+  Real mouse clicks on a disabled button were not tested here.
+- **Not tested on the microscope.** To check there: the lens buttons show ◀ ▶; ◀ makes the
+  Excitation/Detection value larger, ▶ smaller, as before; during a move both buttons of that lens
+  are grey and clicking them does nothing; after the move they work again; with a large Ext step
+  (0.1 mm) the buttons stay grey until the motor has stopped.
+
+---
+
+## 2026-11-09: arrow keys move the stage; keys pressed during a move are dropped
+
+Request: move the stage with the keyboard instead of clicking the arrow buttons. No auto-repeat:
+a key pressed while the stage is moving must do nothing (not be queued).
+
+- `.mlapp` (`appModel.mat` + `document.xml`):
+  - Editable section: property `keyMoveBusy = false`; public methods `stageKeyPress(app, event)`
+    and `keyMoveDone(app)` (after `galvoStep`). `↑`/`↓`/`←`/`→` call `ButtonPushed`,
+    `Button_4Pushed`, `Button_3Pushed`, `Button_2Pushed` (⏫⏬⏪⏩); if `PaintButton` is on and
+    `app.paint` is valid, `Up/Down/Left/RightButtonPushed` instead (with
+    `set(groot,'CurrentFigure',app.paint)` first, so the Paint image goes into the Paint
+    window). Ignored: other keys, Shift/Ctrl/Alt, and focus (`event.Source`) on an edit field,
+    numeric field, drop-down, spinner, slider, list box, text area, table, check box, radio /
+    toggle button or knob. While a move runs `keyMoveBusy` is true; `keyMoveDone` (via
+    `onCleanup`, so also after an error) runs `drawnow; pause(0.1); drawnow` before clearing
+    it, so the keys queued during the move are run and dropped. Depth (Y) has no key.
+  - `UIFigureKeyPress`: the commented-out old shortcuts (off since 2026-11-03) replaced by
+    `stageKeyPress(app, event)`. The old keys stay off.
+  - `PaintButtonValueChanged` and `EnableCamButtonPushed`: the Painting View and the Live View
+    get `KeyPressFcn = @(src, evt) stageKeyPress(app, evt)`, so the keys also work there.
+  - The move callbacks themselves, `startimagealltilesButtonPushed` and the 640 nm Analog code
+    are unchanged. Mouse clicks are unchanged (a click during a key move is not blocked).
+- Docs: `V5_app_guide.md` section 2 shortcut list rewritten (it still listed the old keys,
+  which have not worked since 2026-11-03); section 6.2 row for `UIFigureKeyPress` updated.
+- Edited with R2019a by script (`load(...,'code')`, `save -append`); re-zipped with .NET in the
+  original entry order.
+- Backup: `_archive/MMcodeOrcaV2/LightSheetControl_before_arrow_keys.mlapp`,
+  `_archive/docs/PROGRESS_LOG_before_arrow_keys.md`, `_archive/docs/V5_app_guide_before_arrow_keys.md`.
+- Checks: 71/71 code blocks (editable section + callbacks) and the startup block verbatim in
+  `document.xml`; unzipped `.mlapp` identical to the edited files; checkcode R2019a 346 -> 344
+  (the two INUSD messages of the empty `UIFigureKeyPress` gone; 3 ALIGN notices moved; nothing
+  new); class loads in R2019a, `stageKeyPress`/`keyMoveDone` public; `minimumSupportedMATLABRelease`
+  R2018a. Mock test in R2019a (same busy flag + `onCleanup` + drain, a "move" that blocks
+  MATLAB 1.5 s like `waitForDevice`, keys sent by Windows `SendKeys`): 1 key, 4 keys during
+  the move, 1 key after -> 2 moves, 4 dropped, both on a `uifigure` and on a classic `figure`.
+- **Not tested on the microscope.** To check there: each arrow key moves one step in the same
+  direction as its button (control window, Live View, Painting View); holding a key or pressing
+  it several times during a move gives one step only; with Paint on, the arrows add images to the
+  Paint view (Live View off); arrows in a drop-down or edit field do not move the stage;
+  status lamp green blocks the keys like the buttons.
+
+---
+
 ## 2026-11-07: top bar reordered; Galvo_Z column removed from the offset table (0 V sent)
 
 Request: Light Path and Shutter are hardly used, move them to the right; Laser Power and Filter

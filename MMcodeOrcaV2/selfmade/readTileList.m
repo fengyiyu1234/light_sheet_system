@@ -7,6 +7,11 @@ function [checkpoints, xyzScanArray, V, H, zStep] = readTileList(filename)
 %   V, H         : Vertical tile, Horizontal tile; zStep: z step stored in the file
 %   Works on any imaging_params_*.xlsx written after 2026-11-04 (it has the same
 %   two sheets). Errors if the file is incomplete or inconsistent.
+%   (2026-11-20) Optional columns Focus488_mm .. Focus730_mm: per-tile detection
+%   lens focus (field tile_focus, NaN = default). Files without them load with
+%   every tile on the default focus.
+%   (2026-11-20) Optional sheet FocusSegments: depth segments (field focus_ops,
+%   see tileFocusOps). Files without it load with no segments.
 %   (2026-11-04, MATLAB R2019a compatible: readtable / readcell.)
 
 T = readtable(filename, 'Sheet', 'Tiles');
@@ -50,9 +55,18 @@ end
 template = struct('saved_488nm', false, 'saved_561nm', false, 'saved_640nm', false, ...
     'tile_xpos', [], 'tile_ypos', [], 'tile_zpos', [], 'skip', false, ...
     'current_path', [], 'xPos', [], 'yPos', [], 'zPos', [], ...
-    'start_pos', [], 'end_pos', [], 'saved', false);
+    'start_pos', [], 'end_pos', [], 'saved', false, 'tile_focus', NaN(1,4), 'focus_ops', zeros(0,4));
 checkpoints = repmat(template, n, 1);
+focusCols = {'Focus488_mm', 'Focus561_mm', 'Focus640_mm', 'Focus730_mm'};
+focus = NaN(n, 4);
+for k = 1:4
+    if any(strcmp(T.Properties.VariableNames, focusCols{k}))
+        v = col(T, focusCols{k});
+        focus(:,k) = v(order);
+    end
+end
 for i = 1:n
+    checkpoints(i).tile_focus = focus(i,:);
     checkpoints(i).tile_xpos = px(i);
     checkpoints(i).tile_ypos = py(i);
     checkpoints(i).tile_zpos = pz(i);
@@ -81,6 +95,25 @@ for i = 1:n
         end
         checkpoints(i).start_pos = st(i);
         checkpoints(i).end_pos = en(i);
+    end
+end
+
+try
+    F = readtable(filename, 'Sheet', 'FocusSegments');
+catch
+    F = [];                               % older file: no depth segments
+end
+fneed = {'Tile', 'Color_nm', 'From_um', 'To_um', 'DetLens_mm'};
+if istable(F) && height(F) > 0 && all(ismember(fneed, F.Properties.VariableNames))
+    ft = col(F, 'Tile'); fc = col(F, 'Color_nm'); fd = col(F, 'DetLens_mm');
+    ff = col(F, 'From_um'); ff(isnan(ff)) = -Inf;
+    fto = col(F, 'To_um'); fto(isnan(fto)) = Inf;
+    [~, kk] = ismember(fc, [488 561 640 730]);
+    for r = 1:numel(ft)
+        if kk(r) == 0 || ~(ft(r) >= 1 && ft(r) <= n && ft(r) == round(ft(r)))
+            error('readTileList:focus', 'Sheet FocusSegments, row %d: bad Tile or Color_nm.', r + 1);
+        end
+        checkpoints(ft(r)).focus_ops(end+1, :) = [kk(r), ff(r), fto(r), fd(r)];
     end
 end
 end
